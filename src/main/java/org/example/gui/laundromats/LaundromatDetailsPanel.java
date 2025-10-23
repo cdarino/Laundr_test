@@ -8,6 +8,7 @@ import javax.swing.border.EmptyBorder;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.creators.roundedBorder;
 import org.example.gui.utils.creators.roundedPanel;
+import org.example.gui.utils.creators.buttonCreator;
 
 public class LaundromatDetailsPanel extends JPanel {
 
@@ -16,6 +17,7 @@ public class LaundromatDetailsPanel extends JPanel {
     private JTextArea descriptionArea;
     private JPanel reviewsPanel;
     private JPanel servicesPanel;
+    private buttonCreator pickupBtn;
 
     // labels
     private JLabel nameLabel;
@@ -83,13 +85,13 @@ public class LaundromatDetailsPanel extends JPanel {
 
         // === INNER LEFT PANEL (name + address) ===
         JPanel innerLeftPanel = new JPanel();
-    innerLeftPanel.setLayout(new GridLayout(2, 1, 0, 6)); // 2 rows, 1 column, 6px vertical gap
-    innerLeftPanel.setOpaque(true);
-    innerLeftPanel.setBackground(bg);
-    innerLeftPanel.setBorder(new EmptyBorder(8, 8, 8, 2));  // Reduce right padding from 8 to 2
-    // Allowed to expand to take remaining space between anchored columns
-    innerLeftPanel.setPreferredSize(new Dimension(420, 80));  // Increased width to accommodate longer addresses
-    innerLeftPanel.setMinimumSize(new Dimension(160, 60));
+        innerLeftPanel.setLayout(new GridLayout(2, 1, 0, 6)); // 2 rows, 1 column, 6px vertical gap
+        innerLeftPanel.setOpaque(true);
+        innerLeftPanel.setBackground(bg);
+        innerLeftPanel.setBorder(new EmptyBorder(8, 8, 8, 2));  // Reduce right padding from 8 to 2
+        // Allowed to expand to take remaining space between anchored columns
+        innerLeftPanel.setPreferredSize(new Dimension(420, 80));  // Increased width to accommodate longer addresses
+        innerLeftPanel.setMinimumSize(new Dimension(160, 60));
 
         // Upper panel for name (with left padding to align with address text)
         JPanel upperPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -130,7 +132,9 @@ public class LaundromatDetailsPanel extends JPanel {
 
         // Keep a reference for the label (used in other parts of the code)
         addressLabel = new JLabel();
-        addressLabel.setFont(lato9);        // Add components: icon fixed at WEST, address takes remaining space
+        addressLabel.setFont(lato9);
+        
+        // Add components: icon fixed at WEST, address takes remaining space
         lowerPanel.add(iconPanel, BorderLayout.WEST);
         lowerPanel.add(addressArea, BorderLayout.CENTER);
 
@@ -223,7 +227,7 @@ public class LaundromatDetailsPanel extends JPanel {
         headerPanel.add(topInfoRow, BorderLayout.CENTER);
         add(headerPanel, BorderLayout.NORTH);
 
-        // === CENTER CONTENT (unchanged) ===
+        // === CENTER CONTENT ===
         JPanel centerPanel = new JPanel(new GridLayout(1, 2, 12, 0));
         centerPanel.setOpaque(false);
 
@@ -243,7 +247,7 @@ public class LaundromatDetailsPanel extends JPanel {
         centerPanel.add(revScroll);
         add(centerPanel, BorderLayout.CENTER);
 
-        // === BOTTOM: services + button (unchanged) ===
+        // === BOTTOM: services + button ===
         JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
         bottomPanel.setOpaque(false);
 
@@ -251,13 +255,30 @@ public class LaundromatDetailsPanel extends JPanel {
         servicesPanel.setOpaque(false);
         bottomPanel.add(servicesPanel, BorderLayout.CENTER);
 
-        JButton pickupBtn = new JButton("Request Pickup");
-        pickupBtn.setPreferredSize(new Dimension(160, 40));
+        // Request pickup button using buttonCreator
+        pickupBtn = new buttonCreator("Request Pickup", "Button.font", () -> {
+            // Find the parent container with CardLayout
+            Container parent = this;
+            while (parent != null && !(parent.getLayout() instanceof CardLayout)) {
+                parent = parent.getParent();
+            }
+            
+            if (parent != null) {
+                CardLayout cl = (CardLayout) parent.getLayout();
+                cl.show(parent, "PICKUP");
+            }
+        });
+        
+        // Create a wrapper panel for the button to maintain its size and alignment
+        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonWrapper.setOpaque(false);
+        buttonWrapper.add(pickupBtn);
+        
+        bottomPanel.add(buttonWrapper, BorderLayout.EAST);
         bottomPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
-        bottomPanel.add(pickupBtn, BorderLayout.EAST);
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // === PLACEHOLDER STATE (unchanged) ===
+        // === PLACEHOLDER STATE ===
         placeholderWrapper = new JPanel(new GridBagLayout());
         placeholderWrapper.setOpaque(false);
         placeholderIconLabel = new JLabel(iconCreator.getIcon("Icons/darkmode/laundromatLogoDarkMode.svg", 250, 250));
@@ -289,10 +310,14 @@ public class LaundromatDetailsPanel extends JPanel {
             JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
             bottomPanel.setOpaque(false);
             bottomPanel.add(servicesPanel, BorderLayout.CENTER);
-            JButton pickupBtn = new JButton("Request Pickup");
-            pickupBtn.setPreferredSize(new Dimension(160, 40));
+            
+            // Create a wrapper panel for the button to maintain its size and alignment
+            JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            buttonWrapper.setOpaque(false);
+            buttonWrapper.add(pickupBtn);
+            
+            bottomPanel.add(buttonWrapper, BorderLayout.EAST);
             bottomPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
-            bottomPanel.add(pickupBtn, BorderLayout.EAST);
             add(bottomPanel, BorderLayout.SOUTH);
         }
 
@@ -332,6 +357,16 @@ public class LaundromatDetailsPanel extends JPanel {
             placeholderIconLabel.setIcon(iconCreator.getIcon("Icons/darkmode/laundromatLogoDarkMode.svg", 250, 250));
         }
 
+        // Update header panel background
+        if (headerPanel != null) {
+            headerPanel.setBackground(UIManager.getColor("background"));
+        }
+
+        // Update pickup button
+        if (pickupBtn != null) {
+            pickupBtn.updateUI();
+        }
+
         // keep fonts in sync with theme if UIManager supplies them
         Font fredokaMedium16 = UIManager.getFont("Title.font") != null
                 ? UIManager.getFont("Title.font").deriveFont(Font.BOLD, 16f)
@@ -350,18 +385,17 @@ public class LaundromatDetailsPanel extends JPanel {
         Color dividerColor = UIManager.getColor("listBorder");
         // find any separators in the header and update their colors
         if (topInfoRow != null) {
-    for (Component c : topInfoRow.getComponents()) {
-        if (c instanceof JPanel) {
-            for (Component inner : ((JPanel) c).getComponents()) {
-                if (inner instanceof JSeparator) {
-                    inner.setForeground(dividerColor);
-                    inner.setBackground(dividerColor);
+            for (Component c : topInfoRow.getComponents()) {
+                if (c instanceof JPanel) {
+                    for (Component inner : ((JPanel) c).getComponents()) {
+                        if (inner instanceof JSeparator) {
+                            inner.setForeground(dividerColor);
+                            inner.setBackground(dividerColor);
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
 
         revalidate();
         repaint();
