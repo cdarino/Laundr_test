@@ -1,5 +1,11 @@
 package org.example.gui.laundromats;
 
+import org.example.order.LaundryOrder;
+import org.example.facade.OrderProcessingFacade;
+import org.example.service.Service;         // your factory-produced Service
+import org.example.service.ServiceFactory; // if you want to create services here
+import java.util.ArrayList;
+import java.util.List;
 import java.awt.*;
 import java.util.Arrays;
 import javax.swing.*;
@@ -8,7 +14,6 @@ import javax.swing.border.EmptyBorder;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.creators.roundedBorder;
 import org.example.gui.utils.creators.roundedPanel;
-import org.example.gui.utils.creators.buttonCreator;
 
 public class LaundromatDetailsPanel extends JPanel {
 
@@ -17,7 +22,6 @@ public class LaundromatDetailsPanel extends JPanel {
     private JTextArea descriptionArea;
     private JPanel reviewsPanel;
     private JPanel servicesPanel;
-    private buttonCreator pickupBtn;
 
     // labels
     private JLabel nameLabel;
@@ -30,6 +34,21 @@ public class LaundromatDetailsPanel extends JPanel {
 
     private final JPanel placeholderWrapper;
     private final JLabel placeholderIconLabel;
+
+    // ---- new fields ----
+    private final List<ServiceSelection> selectedServices = new ArrayList<>();
+    private final JTextField pickupField = new JTextField(20);
+    private final JTextField deliveryField = new JTextField(20);
+    private final JTextField contactField = new JTextField(20);
+
+    // helper inner class
+    static class ServiceSelection {
+        final Service service;
+        int qty;
+        ServiceSelection(Service s, int qty) { this.service = s; this.qty = qty; }
+        double total() { return service.basePrice() * qty; }
+        public String toString() { return service.getName() + " x" + qty; }
+    }
 
     public LaundromatDetailsPanel() {
         setLayout(new BorderLayout(12, 12));
@@ -85,13 +104,13 @@ public class LaundromatDetailsPanel extends JPanel {
 
         // === INNER LEFT PANEL (name + address) ===
         JPanel innerLeftPanel = new JPanel();
-        innerLeftPanel.setLayout(new GridLayout(2, 1, 0, 6)); // 2 rows, 1 column, 6px vertical gap
-        innerLeftPanel.setOpaque(true);
-        innerLeftPanel.setBackground(bg);
-        innerLeftPanel.setBorder(new EmptyBorder(8, 8, 8, 2));  // Reduce right padding from 8 to 2
-        // Allowed to expand to take remaining space between anchored columns
-        innerLeftPanel.setPreferredSize(new Dimension(420, 80));  // Increased width to accommodate longer addresses
-        innerLeftPanel.setMinimumSize(new Dimension(160, 60));
+    innerLeftPanel.setLayout(new GridLayout(2, 1, 0, 6)); // 2 rows, 1 column, 6px vertical gap
+    innerLeftPanel.setOpaque(true);
+    innerLeftPanel.setBackground(bg);
+    innerLeftPanel.setBorder(new EmptyBorder(8, 8, 8, 2));  // Reduce right padding from 8 to 2
+    // Allowed to expand to take remaining space between anchored columns
+    innerLeftPanel.setPreferredSize(new Dimension(420, 80));  // Increased width to accommodate longer addresses
+    innerLeftPanel.setMinimumSize(new Dimension(160, 60));
 
         // Upper panel for name (with left padding to align with address text)
         JPanel upperPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -132,9 +151,7 @@ public class LaundromatDetailsPanel extends JPanel {
 
         // Keep a reference for the label (used in other parts of the code)
         addressLabel = new JLabel();
-        addressLabel.setFont(lato9);
-        
-        // Add components: icon fixed at WEST, address takes remaining space
+        addressLabel.setFont(lato9);        // Add components: icon fixed at WEST, address takes remaining space
         lowerPanel.add(iconPanel, BorderLayout.WEST);
         lowerPanel.add(addressArea, BorderLayout.CENTER);
 
@@ -227,7 +244,7 @@ public class LaundromatDetailsPanel extends JPanel {
         headerPanel.add(topInfoRow, BorderLayout.CENTER);
         add(headerPanel, BorderLayout.NORTH);
 
-        // === CENTER CONTENT ===
+        // === CENTER CONTENT (unchanged) ===
         JPanel centerPanel = new JPanel(new GridLayout(1, 2, 12, 0));
         centerPanel.setOpaque(false);
 
@@ -247,7 +264,7 @@ public class LaundromatDetailsPanel extends JPanel {
         centerPanel.add(revScroll);
         add(centerPanel, BorderLayout.CENTER);
 
-        // === BOTTOM: services + button ===
+        // === BOTTOM: services + button (unchanged) ===
         JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
         bottomPanel.setOpaque(false);
 
@@ -255,30 +272,13 @@ public class LaundromatDetailsPanel extends JPanel {
         servicesPanel.setOpaque(false);
         bottomPanel.add(servicesPanel, BorderLayout.CENTER);
 
-        // Request pickup button using buttonCreator
-        pickupBtn = new buttonCreator("Request Pickup", "Button.font", () -> {
-            // Find the parent container with CardLayout
-            Container parent = this;
-            while (parent != null && !(parent.getLayout() instanceof CardLayout)) {
-                parent = parent.getParent();
-            }
-            
-            if (parent != null) {
-                CardLayout cl = (CardLayout) parent.getLayout();
-                cl.show(parent, "PICKUP");
-            }
-        });
-        
-        // Create a wrapper panel for the button to maintain its size and alignment
-        JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonWrapper.setOpaque(false);
-        buttonWrapper.add(pickupBtn);
-        
-        bottomPanel.add(buttonWrapper, BorderLayout.EAST);
+        JButton pickupBtn = new JButton("Request Pickup");
+        pickupBtn.setPreferredSize(new Dimension(160, 40));
         bottomPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+        bottomPanel.add(pickupBtn, BorderLayout.EAST);
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // === PLACEHOLDER STATE ===
+        // === PLACEHOLDER STATE (unchanged) ===
         placeholderWrapper = new JPanel(new GridBagLayout());
         placeholderWrapper.setOpaque(false);
         placeholderIconLabel = new JLabel(iconCreator.getIcon("Icons/darkmode/laundromatLogoDarkMode.svg", 250, 250));
@@ -289,6 +289,100 @@ public class LaundromatDetailsPanel extends JPanel {
         remove(centerPanel);
         remove(bottomPanel);
         add(placeholderWrapper, BorderLayout.CENTER);
+        addCheckoutControls();
+    }
+
+    private void addCheckoutControls() {
+        JPanel checkout = new JPanel();
+        checkout.setOpaque(false);
+        checkout.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(4,4,4,4);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
+        checkout.add(new JLabel("Pickup address:"), gbc);
+        gbc.gridx = 1;
+        checkout.add(pickupField, gbc);
+
+        gbc.gridx = 0; gbc.gridy++;
+        checkout.add(new JLabel("Delivery address:"), gbc);
+        gbc.gridx = 1;
+        checkout.add(deliveryField, gbc);
+
+        gbc.gridx = 0; gbc.gridy++;
+        checkout.add(new JLabel("Contact:"), gbc);
+        gbc.gridx = 1;
+        checkout.add(contactField, gbc);
+
+        gbc.gridx = 0; gbc.gridy++;
+        gbc.gridwidth = 2;
+        JButton placeBtn = new JButton("Place Order");
+        checkout.add(placeBtn, gbc);
+
+        placeBtn.addActionListener(e -> {
+            try {
+                placeOrderAction();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Failed to place order: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        this.add(checkout);
+    }
+
+    private void placeOrderAction() {
+        String pickup = pickupField.getText().trim();
+        String delivery = deliveryField.getText().trim();
+        String contact = contactField.getText().trim();
+        if (pickup.isEmpty() || delivery.isEmpty() || contact.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill pickup, delivery and contact.",
+                    "Missing fields", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (selectedServices.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Select at least one service.",
+                    "No services", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        LaundryOrder.Builder b = new LaundryOrder.Builder()
+                .pickupAddress(pickup)
+                .deliveryAddress(delivery)
+                .contact(contact)
+                .instructions("Placed from GUI");
+
+        for (ServiceSelection ss : selectedServices) {
+            b.addItem(ss.service, ss.qty);
+        }
+        LaundryOrder order = b.build();
+
+        OrderProcessingFacade facade = new OrderProcessingFacade();
+        boolean ok = facade.placeOrder(order, "card-****-1234");
+
+        if (ok) {
+            JOptionPane.showMessageDialog(this, "Order placed: " + order.getId(),
+                    "Success", JOptionPane.INFORMATION_MESSAGE);
+            selectedServices.clear();
+        } else {
+            JOptionPane.showMessageDialog(this, "Payment / placement failed.",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void handleServiceClick(Service clicked) {
+        // find existing selection
+        for (ServiceSelection ss : selectedServices) {
+            if (ss.service.getName().equals(clicked.getName())) {
+                // increment qty or prompt — here we increment for simplicity
+                ss.qty++;
+                JOptionPane.showMessageDialog(this, clicked.getName() + " quantity: " + ss.qty, "Service updated", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+        }
+        // not found -> add with qty 1
+        selectedServices.add(new ServiceSelection(clicked, 1));
+        JOptionPane.showMessageDialog(this, clicked.getName() + " added (qty=1)", "Service added", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /** Populate UI when a laundromat is clicked. */
@@ -310,14 +404,10 @@ public class LaundromatDetailsPanel extends JPanel {
             JPanel bottomPanel = new JPanel(new BorderLayout(12, 0));
             bottomPanel.setOpaque(false);
             bottomPanel.add(servicesPanel, BorderLayout.CENTER);
-            
-            // Create a wrapper panel for the button to maintain its size and alignment
-            JPanel buttonWrapper = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            buttonWrapper.setOpaque(false);
-            buttonWrapper.add(pickupBtn);
-            
-            bottomPanel.add(buttonWrapper, BorderLayout.EAST);
+            JButton pickupBtn = new JButton("Request Pickup");
+            pickupBtn.setPreferredSize(new Dimension(160, 40));
             bottomPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
+            bottomPanel.add(pickupBtn, BorderLayout.EAST);
             add(bottomPanel, BorderLayout.SOUTH);
         }
 
@@ -357,16 +447,6 @@ public class LaundromatDetailsPanel extends JPanel {
             placeholderIconLabel.setIcon(iconCreator.getIcon("Icons/darkmode/laundromatLogoDarkMode.svg", 250, 250));
         }
 
-        // Update header panel background
-        if (headerPanel != null) {
-            headerPanel.setBackground(UIManager.getColor("background"));
-        }
-
-        // Update pickup button
-        if (pickupBtn != null) {
-            pickupBtn.updateUI();
-        }
-
         // keep fonts in sync with theme if UIManager supplies them
         Font fredokaMedium16 = UIManager.getFont("Title.font") != null
                 ? UIManager.getFont("Title.font").deriveFont(Font.BOLD, 16f)
@@ -385,17 +465,18 @@ public class LaundromatDetailsPanel extends JPanel {
         Color dividerColor = UIManager.getColor("listBorder");
         // find any separators in the header and update their colors
         if (topInfoRow != null) {
-            for (Component c : topInfoRow.getComponents()) {
-                if (c instanceof JPanel) {
-                    for (Component inner : ((JPanel) c).getComponents()) {
-                        if (inner instanceof JSeparator) {
-                            inner.setForeground(dividerColor);
-                            inner.setBackground(dividerColor);
-                        }
-                    }
+    for (Component c : topInfoRow.getComponents()) {
+        if (c instanceof JPanel) {
+            for (Component inner : ((JPanel) c).getComponents()) {
+                if (inner instanceof JSeparator) {
+                    inner.setForeground(dividerColor);
+                    inner.setBackground(dividerColor);
                 }
             }
         }
+    }
+}
+
 
         revalidate();
         repaint();
