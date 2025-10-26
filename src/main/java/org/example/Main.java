@@ -1,6 +1,7 @@
 package org.example;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import org.example.database.DBConnect;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.fonts.fontLoader;
 import javax.swing.*;

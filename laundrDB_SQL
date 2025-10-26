@@ -1,0 +1,102 @@
+CREATE DATABASE laundr;
+USE laundr;
+
+-- customer info
+CREATE TABLE customer (
+    custID INT PRIMARY KEY AUTO_INCREMENT,
+    custUsername VARCHAR(50) UNIQUE NOT NULL,
+    custPassword VARCHAR(255) NOT NULL,
+    custPhone VARCHAR(20) UNIQUE,
+    custAddress VARCHAR(150),
+    custEmail VARCHAR(100) UNIQUE
+) AUTO_INCREMENT = 1000;
+
+-- select * from laundr.customer;
+
+-- laundromats
+CREATE TABLE laundromat (
+    laundromatID INT PRIMARY KEY AUTO_INCREMENT,
+    laundromatName VARCHAR(100) NOT NULL,
+    laundromatAddress VARCHAR(150) NOT NULL,
+    laundromatPhone VARCHAR(20),
+    laundromatEmail VARCHAR(100),
+    rating DECIMAL(2,1)
+);
+
+
+-- laundromat services
+CREATE TABLE service (
+    serviceID INT PRIMARY KEY AUTO_INCREMENT,
+    laundromatID INT,
+    serviceName VARCHAR(100), -- ex Wash & Fold, Iron, etc
+    description TEXT,
+    price DECIMAL(10,2),
+    estimatedTime INT, -- in hours
+    FOREIGN KEY (laundromatID) REFERENCES laundromat(laundromatID)
+);
+
+
+-- delivery riders?
+CREATE TABLE rider (
+    riderID INT PRIMARY KEY AUTO_INCREMENT,
+    riderName VARCHAR(100),
+    riderPhone VARCHAR(20),
+    status ENUM('available','busy') DEFAULT 'available'
+);
+
+
+-- laundry orders
+CREATE TABLE orders (
+    orderID INT PRIMARY KEY AUTO_INCREMENT,
+    custID INT,
+    laundromatID INT,
+    riderID INT NULL,
+    orderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    pickupAddress VARCHAR(150),
+    deliveryAddress VARCHAR(150),
+    orderStatus ENUM('pending','accepted','in_progress','completed','cancelled') DEFAULT 'pending',
+    totalAmount DECIMAL(10,2),
+    FOREIGN KEY (custID) REFERENCES customer(custID),
+    FOREIGN KEY (laundromatID) REFERENCES laundromat(laundromatID),
+    FOREIGN KEY (riderID) REFERENCES rider(riderID)
+) AUTO_INCREMENT = 1001;
+
+
+CREATE TABLE orderDetails (
+    orderDetailsID INT PRIMARY KEY AUTO_INCREMENT,
+    orderID INT,
+    serviceID INT,
+    quantity INT DEFAULT 1,
+    subtotal DECIMAL(10,2),
+    FOREIGN KEY (orderID) REFERENCES orders(orderID),
+    FOREIGN KEY (serviceID) REFERENCES service(serviceID)
+);
+
+
+-- payments
+CREATE TABLE payment (
+    paymentID INT PRIMARY KEY AUTO_INCREMENT,
+    orderID INT,
+    paymentDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    paymentMethod ENUM('cash','card','gcash','maya') DEFAULT 'cash',
+    paymentStatus ENUM('unpaid','paid','refunded') DEFAULT 'unpaid',
+    amount DECIMAL(10,2),
+    FOREIGN KEY (orderID) REFERENCES orders(orderID)
+);
+
+
+-- customer reviews
+CREATE TABLE review (
+    reviewID INT PRIMARY KEY AUTO_INCREMENT,
+    orderID INT,
+    laundromatID INT,
+    custID INT,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orderID) REFERENCES orders(orderID),
+    FOREIGN KEY (laundromatID) REFERENCES laundromat(laundromatID),
+    FOREIGN KEY (custID) REFERENCES customer(custID)
+);
+
+    

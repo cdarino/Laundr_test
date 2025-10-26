@@ -1,5 +1,7 @@
 package org.example.gui.panels;
 
+import org.example.database.DBConnect;
+import org.example.database.CustomerDAO;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.creators.iconCreator;
@@ -7,6 +9,7 @@ import org.example.gui.utils.creators.themeToggleButton;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Connection;
 
 public class Login extends JPanel {
     private JLabel title;
@@ -78,7 +81,7 @@ public class Login extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
         buttonPanel.setOpaque(false);
 
-        loginBtn = new buttonCreator("Login", "Button.font", () -> frame.showCard("LANDING"));
+        loginBtn = new buttonCreator("Login", "Button.font", this::handleLogin);
         registerBtn = new buttonCreator("Register", "Button.font", () -> frame.showCard("REGISTER"));
         buttonPanel.add(loginBtn);
         buttonPanel.add(registerBtn);
@@ -101,6 +104,53 @@ public class Login extends JPanel {
         updateUI();
     }
 
+    private void handleLogin() {
+        String username = usernameField.getText().trim();
+        String password = new String(passwordField.getPassword());
+
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter username and password.",
+                    "Missing Information",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try (Connection conn = DBConnect.getConnection()) {
+            if (conn == null) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to connect to database.",
+                        "Database Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            CustomerDAO dao = new CustomerDAO(conn);
+            boolean success = dao.validateLogin(username, password);
+
+            if (success) {
+                JOptionPane.showMessageDialog(this,
+                        "Login successful!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                frame.showCard("LANDING");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Invalid username or password.",
+                        "Login Failed",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error: " + e.getMessage(),
+                    "Exception",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     @Override
     public void updateUI() {
         super.updateUI();
@@ -108,7 +158,6 @@ public class Login extends JPanel {
         setBackground(UIManager.getColor("Panel.background"));
         if (formPanel != null) formPanel.setBackground(UIManager.getColor("Panel.background"));
 
-        // Refresh logo according to theme
         if (logoLabel != null) {
             logoLabel.setIcon(
                     iconCreator.getIcon(

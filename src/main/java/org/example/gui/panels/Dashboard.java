@@ -1,5 +1,6 @@
 package org.example.gui.panels;
 
+import org.example.gui.Mainframe;
 import org.example.gui.utils.dashboard.recommendations.laundromatsNearUser;
 import org.example.gui.utils.dashboard.recommendations.recentOrders;
 import org.example.gui.utils.dashboard.welcomeCard;
@@ -15,6 +16,8 @@ public class Dashboard extends JPanel {
     private laundromatsNearUser leftPanel;
     private recentOrders rightPanel;
 
+    private JLabel usernameLabel;
+
     public Dashboard() {
         setOpaque(true);
         setBackground(UIManager.getColor("background"));
@@ -29,7 +32,7 @@ public class Dashboard extends JPanel {
         mainWrapper.setLayout(new BoxLayout(mainWrapper, BoxLayout.Y_AXIS));
         mainWrapper.setBorder(BorderFactory.createEmptyBorder(TOP_MARGIN, SIDE_MARGIN, 40, SIDE_MARGIN));
 
-        welcomeCard = new welcomeCard("johndoe123");
+        welcomeCard = new welcomeCard("username");
         welcomeCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         welcomeCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
         mainWrapper.add(welcomeCard);
@@ -68,6 +71,6 @@ public class Dashboard extends JPanel {
     }
 
     public void setUsername(String username) {
-        if (welcomeCard != null) welcomeCard.setUsername(username);
+        usernameLabel.setText("Welcome, " + username + "!");
     }
 }

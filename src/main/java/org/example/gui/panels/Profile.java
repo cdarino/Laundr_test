@@ -1,5 +1,6 @@
 package org.example.gui.panels;
 
+import org.example.gui.Mainframe;
 import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.creators.roundedBorder;
@@ -11,6 +12,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class Profile extends JPanel {
+    private JLabel usernameLabel;
 
     public Profile() {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -43,7 +45,7 @@ public class Profile extends JPanel {
         namePanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
         namePanel.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        JLabel nameLabel = new JLabel("johndoe123");
+        JLabel nameLabel = new JLabel("username");
         fontManager.applyHeading(nameLabel, 5);
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
