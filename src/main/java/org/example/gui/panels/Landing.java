@@ -26,7 +26,7 @@ public class Landing extends JPanel {
         centerPanel = new JPanel(centerLayout);
 
         centerPanel.add(new Dashboard(), "DASHBOARD");
-        centerPanel.add(new Profile(), "PROFILE");
+        centerPanel.add(new Laundromats(), "LAUNDROMATS");
         centerPanel.add(new Profile(), "PROFILE");
         centerPanel.add(new EditProfile(), "EDIT");
         centerPanel.add(new Orders(), "ORDERS");
@@ -52,14 +52,6 @@ public class Landing extends JPanel {
             revalidate();
             repaint();
         }
-    }
-
-    public void showDashboard() {
-        centerLayout.show(this, "DASHBOARD");
-    }
-
-    public void showProfile() {
-        centerLayout.show(this, "PROFILE");
     }
 
     @Override

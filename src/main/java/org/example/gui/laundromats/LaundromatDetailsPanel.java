@@ -1,11 +1,5 @@
 package org.example.gui.laundromats;
 
-import org.example.order.LaundryOrder;
-import org.example.facade.OrderProcessingFacade;
-import org.example.service.Service;         // your factory-produced Service
-import org.example.service.ServiceFactory; // if you want to create services here
-import java.util.ArrayList;
-import java.util.List;
 import java.awt.*;
 import java.util.Arrays;
 import javax.swing.*;
@@ -34,21 +28,6 @@ public class LaundromatDetailsPanel extends JPanel {
 
     private final JPanel placeholderWrapper;
     private final JLabel placeholderIconLabel;
-
-    // ---- new fields ----
-    private final List<ServiceSelection> selectedServices = new ArrayList<>();
-    private final JTextField pickupField = new JTextField(20);
-    private final JTextField deliveryField = new JTextField(20);
-    private final JTextField contactField = new JTextField(20);
-
-    // helper inner class
-    static class ServiceSelection {
-        final Service service;
-        int qty;
-        ServiceSelection(Service s, int qty) { this.service = s; this.qty = qty; }
-        double total() { return service.basePrice() * qty; }
-        public String toString() { return service.getName() + " x" + qty; }
-    }
 
     public LaundromatDetailsPanel() {
         setLayout(new BorderLayout(12, 12));
@@ -289,100 +268,6 @@ public class LaundromatDetailsPanel extends JPanel {
         remove(centerPanel);
         remove(bottomPanel);
         add(placeholderWrapper, BorderLayout.CENTER);
-        addCheckoutControls();
-    }
-
-    private void addCheckoutControls() {
-        JPanel checkout = new JPanel();
-        checkout.setOpaque(false);
-        checkout.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4,4,4,4);
-        gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
-        checkout.add(new JLabel("Pickup address:"), gbc);
-        gbc.gridx = 1;
-        checkout.add(pickupField, gbc);
-
-        gbc.gridx = 0; gbc.gridy++;
-        checkout.add(new JLabel("Delivery address:"), gbc);
-        gbc.gridx = 1;
-        checkout.add(deliveryField, gbc);
-
-        gbc.gridx = 0; gbc.gridy++;
-        checkout.add(new JLabel("Contact:"), gbc);
-        gbc.gridx = 1;
-        checkout.add(contactField, gbc);
-
-        gbc.gridx = 0; gbc.gridy++;
-        gbc.gridwidth = 2;
-        JButton placeBtn = new JButton("Place Order");
-        checkout.add(placeBtn, gbc);
-
-        placeBtn.addActionListener(e -> {
-            try {
-                placeOrderAction();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Failed to place order: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        this.add(checkout);
-    }
-
-    private void placeOrderAction() {
-        String pickup = pickupField.getText().trim();
-        String delivery = deliveryField.getText().trim();
-        String contact = contactField.getText().trim();
-        if (pickup.isEmpty() || delivery.isEmpty() || contact.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill pickup, delivery and contact.",
-                    "Missing fields", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        if (selectedServices.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Select at least one service.",
-                    "No services", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        LaundryOrder.Builder b = new LaundryOrder.Builder()
-                .pickupAddress(pickup)
-                .deliveryAddress(delivery)
-                .contact(contact)
-                .instructions("Placed from GUI");
-
-        for (ServiceSelection ss : selectedServices) {
-            b.addItem(ss.service, ss.qty);
-        }
-        LaundryOrder order = b.build();
-
-        OrderProcessingFacade facade = new OrderProcessingFacade();
-        boolean ok = facade.placeOrder(order, "card-****-1234");
-
-        if (ok) {
-            JOptionPane.showMessageDialog(this, "Order placed: " + order.getId(),
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-            selectedServices.clear();
-        } else {
-            JOptionPane.showMessageDialog(this, "Payment / placement failed.",
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void handleServiceClick(Service clicked) {
-        // find existing selection
-        for (ServiceSelection ss : selectedServices) {
-            if (ss.service.getName().equals(clicked.getName())) {
-                // increment qty or prompt — here we increment for simplicity
-                ss.qty++;
-                JOptionPane.showMessageDialog(this, clicked.getName() + " quantity: " + ss.qty, "Service updated", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-        }
-        // not found -> add with qty 1
-        selectedServices.add(new ServiceSelection(clicked, 1));
-        JOptionPane.showMessageDialog(this, clicked.getName() + " added (qty=1)", "Service added", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /** Populate UI when a laundromat is clicked. */

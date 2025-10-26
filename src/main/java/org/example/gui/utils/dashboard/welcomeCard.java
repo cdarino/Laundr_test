@@ -63,5 +63,8 @@ public class welcomeCard extends JPanel {
         repaint();
     }
 
+    public void setUsername(String username) {
+        if (user != null) user.setText(username + " !");
+    }
 }
 
