@@ -17,10 +17,15 @@ public class PickupPanel extends JPanel {
     private JTextField quantityField;
     private ButtonGroup serviceTypeGroup, colorSeparationGroup;
     private JTextArea instructionsArea;
-    private List<String> selectedServices = new ArrayList<>();
+    private final List<String> selectedServices = new ArrayList<>();
     private JLabel selectedServiceLabel, quantityLabel, separationLabel, instructionsLabel;
 
-    public PickupPanel() {
+    // Callback to navigate back to details view
+    private final Runnable onGoBack;
+
+    public PickupPanel(Runnable onGoBack) {
+        this.onGoBack = onGoBack;
+
         setLayout(new BorderLayout());
         setBackground(UIManager.getColor("Panel.background"));
         setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -31,10 +36,15 @@ public class PickupPanel extends JPanel {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weighty = 1.0;
 
-        String[] titles = {"Select Services", "Details", "Order Summary"};
-        JPanel[] panels = {createServicesPanel(), createDetailsPanel(), createSummaryPanel()};
+        // Build sections and assign to fields so updateUI can style them
+        this.servicesPanel = createServicesPanel();
+        this.detailsPanel = createDetailsPanel();
+        this.summaryPanel = createSummaryPanel();
 
-        for (int i = 0; i < 3; i++) {
+        String[] titles = {"Select Services", "Details", "Order Summary"};
+        JPanel[] panels = {servicesPanel, detailsPanel, summaryPanel};
+
+        for (int i = 0; i < panels.length; i++) {
             roundedPanel section = new roundedPanel(20);
             section.setLayout(new BorderLayout());
             section.setBackground(UIManager.getColor("Sidebarbtn.background"));
@@ -43,7 +53,7 @@ public class PickupPanel extends JPanel {
 
             gbc.gridx = i;
             gbc.weightx = 0.33;
-            gbc.insets = new Insets(0, i == 0 ? 0 : 10, 0, i == 2 ? 0 : 10);
+            gbc.insets = new Insets(0, i == 0 ? 0 : 10, 0, i == panels.length - 1 ? 0 : 10);
             mainContainer.add(section, gbc);
         }
 
@@ -194,10 +204,7 @@ public class PickupPanel extends JPanel {
         bottomPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
         buttonCreator goBack = new buttonCreator("Go Back", "Button.font", () -> {
-            Container parent = getParent();
-            if (parent instanceof JPanel) {
-                ((CardLayout) parent.getLayout()).show(parent, "LAUNDROMATS");
-            }
+            if (onGoBack != null) onGoBack.run();
         });
 
         buttonCreator confirm = new buttonCreator("Confirm Delivery", "Button.font", () ->
@@ -229,15 +236,17 @@ public class PickupPanel extends JPanel {
 
         // Quantity
         String quantityText = quantityField.getText().trim();
+        String unit = "Articles of Clothing";
+        String st = getSelectedButtonText(serviceTypeGroup);
+        if ("Kilograms".equals(st)) unit = "Kilograms";
         quantityLabel.setText("<html><body style='width:220px;'>" +
-                (quantityText.isEmpty() ? "0" :
-                        quantityText + " " + (getSelectedButtonText(serviceTypeGroup).equals("Kilograms") ?
-                                "Kilograms" : "Articles of Clothing")) + "</body></html>");
+                (quantityText.isEmpty() ? "0" : quantityText + " " + unit) +
+                "</body></html>");
 
         // Separation
         String sepText = getSelectedButtonText(colorSeparationGroup);
         separationLabel.setText("<html><body style='width:220px;'>" +
-                (sepText.equals("Yes") ? "Separate Colored & Non-Colored"
+                ("Yes".equals(sepText) ? "Separate Colored & Non-Colored"
                         : "Do Not Separate Colored & Non-Colored") + "</body></html>");
 
         // Instructions
@@ -256,54 +265,54 @@ public class PickupPanel extends JPanel {
 
     private class ServiceButton extends roundedPanel {
         private boolean selected;
-        
+
         public ServiceButton(String text, String iconPath) {
             super(20);
             setPreferredSize(new Dimension(100, 120));
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
             setBackground(UIManager.getColor("Sidebarbtn.background"));
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            
+
             JLabel icon = new JLabel(iconCreator.getIcon(iconPath, 48, 48));
             icon.setAlignmentX(Component.CENTER_ALIGNMENT);
-            
+
             JLabel label = new JLabel("<html><center>" + text + "</center.</html>");
             label.setForeground(Color.BLACK);
             label.setAlignmentX(Component.CENTER_ALIGNMENT);
-            
+
             add(Box.createVerticalStrut(10));
             add(icon);
             add(Box.createVerticalStrut(10));
             add(label);
             add(Box.createVerticalGlue());
-            
+
             addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseClicked(java.awt.event.MouseEvent e) {
                     selected = !selected;
                     if (selected) selectedServices.add(text);
                     else selectedServices.remove(text);
-                    setBackground(UIManager.getColor(selected ? "Button.pressedBackground" : " Sidebarbtn.background"));
+                    setBackground(UIManager.getColor(selected ? "Button.pressedBackground" : "Sidebarbtn.background"));
                     updateOrderSummary();
                 }
-                
+
                 @Override
                 public void mouseEntered(java.awt.event.MouseEvent e) {
                     if (!selected) setBackground(UIManager.getColor("Button.hoverBackground"));
                 }
-                
+
                 @Override
                 public void mouseExited(java.awt.event.MouseEvent e) {
                     if (!selected) setBackground(UIManager.getColor("Sidebarbtn.background"));
                 }
             });
         }
-    }                
-    
+    }
+
     @Override
     public void updateUI() {
         super.updateUI();
-        setBackground(UIManager.getColor("Panel.Background"));
+        setBackground(UIManager.getColor("Panel.background"));
         if (servicesPanel != null) servicesPanel.setBackground(UIManager.getColor("Panel.background"));
         if (detailsPanel != null) detailsPanel.setBackground(UIManager.getColor("Sidebarbtn.background"));
         if (summaryPanel != null) summaryPanel.setBackground(UIManager.getColor("Panel.background"));
