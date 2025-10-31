@@ -13,6 +13,7 @@ import java.awt.event.ComponentEvent;
  * - Transparent background (outer rounded border is provided by parent card).
  * - Uses a fixed-height spacer between icon and label so the gap is reliable.
  * - Icon size recomputed on resize so it grows/shrinks with window.
+ * - Label font set to Fredoka Bold, slightly larger than default (but smaller than the pickup button).
  */
 public class ServiceCard extends roundedPanel {
 
@@ -23,9 +24,13 @@ public class ServiceCard extends roundedPanel {
 
     // Tunables: clamp icon size between these bounds
     private static final int MIN_ICON_PX = 48;
-    private static final int MAX_ICON_PX = 88;   // slightly conservative
-    // Gap between image and text (adjust to taste)
-    private static final int ICON_TEXT_GAP = 10; // increased gap
+    private static final int MAX_ICON_PX = 88;
+
+    // Gap between image and text
+    private static final int ICON_TEXT_GAP = 10;
+
+    // Slight font size bump for service labels (smaller than the pickup button)
+    private static final float LABEL_FONT_DELTA = 1.0f;
 
     public ServiceCard(String text, String iconFile) {
         super(20);
@@ -47,7 +52,7 @@ public class ServiceCard extends roundedPanel {
 
         add(Box.createVerticalGlue());
         add(iconLabel);
-        add(spacer); // explicit, reliable gap between image and text
+        add(spacer);
         add(lbl);
         add(Box.createVerticalGlue());
 
@@ -61,7 +66,45 @@ public class ServiceCard extends roundedPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        SwingUtilities.invokeLater(this::updateIconSize);
+        SwingUtilities.invokeLater(() -> {
+            applyLabelFont();
+            updateIconSize();
+        });
+    }
+
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        // Re-apply label font on LAF changes
+        if (lbl != null) {
+            applyLabelFont();
+        }
+    }
+
+    private void applyLabelFont() {
+        // Base from UI or label; increase slightly
+        Font base = UIManager.getFont("defaultFont");
+        if (base == null) base = lbl.getFont();
+        float size = (base != null ? base.getSize2D() : 12f) + LABEL_FONT_DELTA;
+
+        // Try Fredoka bold; fallback to base bold
+        Font fredokaBold = getFredokaBold(size, (base != null ? base : new Font("Dialog", Font.PLAIN, Math.round(size))));
+        lbl.setFont(fredokaBold);
+        Color fg = UIManager.getColor("Label.foreground");
+        if (fg != null) lbl.setForeground(fg);
+        revalidate();
+        repaint();
+    }
+
+    private static Font getFredokaBold(float size, Font fallback) {
+        String[] candidates = { "Fredoka", "Fredoka Medium", "Fredoka One" };
+        for (String name : candidates) {
+            Font f = new Font(name, Font.BOLD, Math.round(size));
+            if (!"Dialog".equalsIgnoreCase(f.getFamily())) {
+                return f.deriveFont(Font.BOLD, size);
+            }
+        }
+        return fallback.deriveFont(Font.BOLD, size);
     }
 
     private void updateIconSize() {
@@ -69,11 +112,10 @@ public class ServiceCard extends roundedPanel {
         int h = Math.max(0, getHeight());
         if (w == 0 || h == 0) return;
 
-        // Leave room for the spacer and the label
         int labelH = lbl.getPreferredSize().height + ICON_TEXT_GAP;
         int availHForIcon = Math.max(0, h - labelH - 8);
 
-        // Slightly conservative scaling
+        // Conservative responsive scaling
         int sizeByHeight = (int) Math.round(availHForIcon * 0.65);
         int sizeByWidth  = (int) Math.round(w * 0.50);
 

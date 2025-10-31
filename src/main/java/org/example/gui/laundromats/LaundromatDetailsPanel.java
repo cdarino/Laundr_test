@@ -244,8 +244,8 @@ public class LaundromatDetailsPanel extends JPanel {
         reviewsPanel.setLayout(new BoxLayout(reviewsPanel, BoxLayout.Y_AXIS));
         reviewsPanel.setOpaque(false);
 
-        // Services: full-width, fixed 3 columns, no outer padding. Prevents vertical stacking.
-        servicesPanel = new JPanel(new GridLayout(1, 3, 16, 0)); // gap widened previously to 16
+        // Services: full-width, fixed 3 columns, no outer padding
+        servicesPanel = new JPanel(new GridLayout(1, 3, 20, 0));
         servicesPanel.setOpaque(false);
         servicesPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
@@ -261,7 +261,6 @@ public class LaundromatDetailsPanel extends JPanel {
             @Override public Dimension getMinimumSize() { return new Dimension(0, super.getMinimumSize().height); }
         };
         outerLeftPanel.setOpaque(false);
-        // FIX: remove bottom inset to reduce bottom window gap
         outerLeftPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
         GridBagConstraints ol = new GridBagConstraints();
@@ -269,6 +268,7 @@ public class LaundromatDetailsPanel extends JPanel {
         ol.fill = GridBagConstraints.BOTH;
         ol.weightx = 1.0;
 
+        // Description card (top-left) — 70% height share
         descriptionPanel = new roundedPanel(18);
         descriptionPanel.setOpaque(true);
         descriptionPanel.setBackground(bg);
@@ -290,12 +290,14 @@ public class LaundromatDetailsPanel extends JPanel {
         ol.weighty = 0.70;
         outerLeftPanel.add(descriptionPanel, ol);
 
+        // Spacer between description and services (20px)
         ol.gridy = 1;
         ol.weighty = 0;
         ol.insets = new Insets(20, 0, 0, 0);
         outerLeftPanel.add(Box.createVerticalStrut(20), ol);
         ol.insets = new Insets(0, 0, 0, 0);
 
+        // Services container (bottom-left) — 30% height share, full width
         ol.gridy = 2;
         ol.weighty = 0.30;
         outerLeftPanel.add(servicesPanel, ol);
@@ -305,9 +307,9 @@ public class LaundromatDetailsPanel extends JPanel {
             @Override public Dimension getMinimumSize() { return new Dimension(0, super.getMinimumSize().height); }
         };
         outerRightPanel.setOpaque(false);
-        // FIX: remove bottom inset to reduce bottom window gap
         outerRightPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
 
+        // Reviews card
         reviewsWrapperPanel = new roundedPanel(18);
         reviewsWrapperPanel.setOpaque(true);
         reviewsWrapperPanel.setBackground(bg);
@@ -324,6 +326,7 @@ public class LaundromatDetailsPanel extends JPanel {
         revScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         reviewsWrapperPanel.add(revScroll, BorderLayout.CENTER);
 
+        // Request pickup button (no wrapper; full width, fixed height = default + 20)
         pickupBtn = new buttonCreator("Request Pickup", "Button.font", () -> {
             Container parent = this;
             while (parent != null && !(parent.getLayout() instanceof CardLayout)) {
@@ -334,19 +337,43 @@ public class LaundromatDetailsPanel extends JPanel {
                 cl.show(parent, "PICKUP");
             }
         });
+
+        // Set font to Fredoka Bold; auto-scale to take ~90% of button width
+        Font base = UIManager.getFont("Button.font");
+        float baseSize = base != null ? base.getSize2D() : 13f;
+        Font fredokaBold = getFredokaBold(baseSize, base != null ? base.deriveFont(Font.BOLD) : new Font("Dialog", Font.BOLD, Math.round(baseSize)));
+        pickupBtn.setCustomFont(fredokaBold);
+        // Enable auto-scaling (ratio ~0.90) with sensible min/max; height constraint is enforced internally
+        pickupBtn.enableAutoScaleToWidth(0.90f, 12f, 26f);
+
+        // Compute fixed height and width constraints after font setup
         Dimension ph = pickupBtn.getPreferredSize();
         pickupBtnFixedHeight = Math.max(ph.height + 20, ph.height);
         pickupBtn.setPreferredSize(new Dimension(ph.width, pickupBtnFixedHeight));
         pickupBtn.setMinimumSize(new Dimension(0, pickupBtnFixedHeight));
         pickupBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, pickupBtnFixedHeight));
 
+        // Assemble right column
         outerRightPanel.add(reviewsWrapperPanel, VerticalTopFillBottomFixedGapLayout.TOP);
         outerRightPanel.add(pickupBtn, VerticalTopFillBottomFixedGapLayout.BOTTOM);
 
+        // Add columns to center
         centerContentPanel.add(outerLeftPanel, TwoColumnFixedGapLayout.LEFT);
         centerContentPanel.add(outerRightPanel, TwoColumnFixedGapLayout.RIGHT);
 
         add(centerContentPanel, BorderLayout.CENTER);
+    }
+
+    // Try to get a Fredoka bold font; fallback to provided font if unavailable
+    private static Font getFredokaBold(float size, Font fallback) {
+        String[] candidates = { "Fredoka", "Fredoka Medium", "Fredoka One" };
+        for (String name : candidates) {
+            Font f = new Font(name, Font.BOLD, Math.round(size));
+            if (!"Dialog".equalsIgnoreCase(f.getFamily())) {
+                return f.deriveFont(Font.BOLD, size);
+            }
+        }
+        return fallback.deriveFont(Font.BOLD, size);
     }
 
     /** Populate UI when a laundromat is clicked. */
@@ -357,6 +384,7 @@ public class LaundromatDetailsPanel extends JPanel {
             add(centerContentPanel, BorderLayout.CENTER);
         }
 
+        // update fields
         logoLabel.setIcon(iconCreator.getIcon("Icons/lightmode/laundromatLogo.svg", 48, 48));
         nameLabel.setText(data.name);
         addressArea.setText(data.address);
@@ -366,6 +394,7 @@ public class LaundromatDetailsPanel extends JPanel {
 
         descriptionArea.setText(data.description != null ? data.description : "");
 
+        // Populate reviews
         reviewsPanel.removeAll();
         Arrays.asList(
                 new ReviewCard("John Doe", "Great service! Will definitely come back."),
@@ -373,26 +402,35 @@ public class LaundromatDetailsPanel extends JPanel {
                 new ReviewCard("Alex", "Convenient and affordable.")
         ).forEach(reviewsPanel::add);
 
+        // Populate services: each one gets its own rounded border card, no inner padding
         servicesPanel.removeAll();
         servicesPanel.add(createServiceItem("Wash & Fold", "Icons/Services/washandFold.svg"));
         servicesPanel.add(createServiceItem("Dry Clean", "Icons/Services/dryClean.svg"));
         servicesPanel.add(createServiceItem("Ironing", "Icons/Services/iron.svg"));
 
+        // Ensure button rescales after content/layout changes
+        SwingUtilities.invokeLater(() -> {
+            if (pickupBtn != null) pickupBtn.rescaleNow();
+        });
+
         revalidate();
         repaint();
     }
 
+    // Create a single service item with its own rounded border, no inner padding; fills its grid cell
     private JComponent createServiceItem(String title, String iconPath) {
         Color bg = UIManager.getColor("background");
         Color borderColor = UIManager.getColor("listBorder");
 
+        // Actual service content (transparent ServiceCard)
         JComponent content = new ServiceCard(title, iconPath);
 
+        // Wrap the content in its own rounded card, NO inner padding
         roundedPanel card = new roundedPanel(18);
         card.setOpaque(true);
         card.setBackground(bg);
         card.setLayout(new BorderLayout());
-        card.setBorder(new roundedBorder(18, borderColor, 2));
+        card.setBorder(new roundedBorder(18, borderColor, 2)); // no EmptyBorder padding
         card.add(content, BorderLayout.CENTER);
 
         return card;
@@ -410,13 +448,14 @@ public class LaundromatDetailsPanel extends JPanel {
         if (reviewsWrapperPanel != null) reviewsWrapperPanel.setBackground(bg);
 
         if (pickupBtn != null) {
-            pickupBtn.updateUI();
+            // Keep height; text width scaling handled inside buttonCreator
             if (pickupBtnFixedHeight > 0) {
                 Dimension ph = pickupBtn.getPreferredSize();
                 pickupBtn.setPreferredSize(new Dimension(ph.width, pickupBtnFixedHeight));
                 pickupBtn.setMinimumSize(new Dimension(0, pickupBtnFixedHeight));
                 pickupBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, pickupBtnFixedHeight));
             }
+            SwingUtilities.invokeLater(pickupBtn::rescaleNow);
         }
 
         Font fredokaMedium16 = UIManager.getFont("Title.font") != null
