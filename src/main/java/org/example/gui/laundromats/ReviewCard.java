@@ -33,10 +33,10 @@ public class ReviewCard extends roundedPanel {
 
         setOpaque(true);
         setBackground(UIManager.getColor("background"));
-        // Slightly up and to the right, generous right/bottom padding
+        // Restored inner padding exactly as before: top=8, left=24, bottom=16, right=16
         setBorder(BorderFactory.createCompoundBorder(
                 new roundedBorder(18, getAccentBorderColor(), 2),
-                new EmptyBorder(8, 24, 16, 16)  // top, left, bottom, right
+                new EmptyBorder(8, 24, 16, 16)
         ));
         setLayout(new BorderLayout());
         setAlignmentX(LEFT_ALIGNMENT);
@@ -44,7 +44,7 @@ public class ReviewCard extends roundedPanel {
         // Let BoxLayout in parent stretch width; we won't overflow the viewport
         setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        // Vertical stack: header -> divider -> comment
+        // Vertical stack: header -> (4px) -> divider (2px) -> (12px) -> comment
         JPanel body = new JPanel();
         body.setOpaque(false);
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -114,6 +114,7 @@ public class ReviewCard extends roundedPanel {
 
         applyThemeStyling();
         applyTextColors();
+        applyIconTheme();
     }
 
     // Ensure width stretching works even if some LAF resets maximums
@@ -126,14 +127,17 @@ public class ReviewCard extends roundedPanel {
     @Override
     public void updateUI() {
         super.updateUI();
+        // Defer to avoid running before fields are ready under some LAFs
         SwingUtilities.invokeLater(() -> {
             applyThemeStyling();
             applyTextColors();
+            applyIconTheme();
         });
     }
 
     private void applyThemeStyling() {
         setBackground(UIManager.getColor("background"));
+        // Restore exact inner padding and border on L&F change
         setBorder(BorderFactory.createCompoundBorder(
                 new roundedBorder(18, getAccentBorderColor(), 2),
                 new EmptyBorder(8, 24, 16, 16)
@@ -142,15 +146,25 @@ public class ReviewCard extends roundedPanel {
             Color accent = getAccentBorderColor();
             headerDivider.setForeground(accent);
             headerDivider.setBackground(accent);
+            headerDivider.setMinimumSize(new Dimension(1, 2));
+            headerDivider.setPreferredSize(new Dimension(1, 2));
+            headerDivider.setMaximumSize(new Dimension(Integer.MAX_VALUE, 2));
         }
     }
 
     private void applyTextColors() {
         Color fg = UIManager.getColor("Label.foreground");
-        if (fg == null) fg = Color.BLACK;
+        if (fg != null) {
+            userName.setForeground(fg);
+            commentArea.setForeground(fg);
+        }
+    }
 
-        if (userName != null) userName.setForeground(fg);
-        if (commentArea != null) commentArea.setForeground(fg);
+    private void applyIconTheme() {
+        boolean dark = isDarkTheme();
+        userIcon.setIcon(iconCreator.getIcon(
+                dark ? "Icons/darkmode/userIconWhite.svg" : "Icons/lightmode/userIconBlue.svg",
+                24, 24));
     }
 
     private static Color getAccentBorderColor() {

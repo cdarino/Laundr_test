@@ -35,6 +35,12 @@ public class LaundromatDetailsPanel extends JPanel {
     private JLabel logoLabel;
     private EllipsisLabel addressEllipsisLabel;
 
+    // ADDED: references to swap icons on theme change
+    private JLabel addrIconLabel;
+    private JLabel distIconLabel;
+    private JLabel delIconLabel;
+    private JLabel starIconLabel;
+
     // section titles (outside card borders)
     private JLabel highlightsTitleLabel;
     private JLabel servicesTitleLabel;
@@ -137,8 +143,9 @@ public class LaundromatDetailsPanel extends JPanel {
         JPanel iconPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         iconPanel.setOpaque(false);
         iconPanel.setAlignmentY(JPanel.TOP_ALIGNMENT);
-        JLabel addrIcon = new JLabel(iconCreator.getIcon("Icons/address.svg", 12, 12));
-        iconPanel.add(addrIcon);
+        // ADDED: keep label as a field for theme swapping
+        addrIconLabel = new JLabel(iconCreator.getIcon("Icons/address.svg", 12, 12));
+        iconPanel.add(addrIconLabel);
 
         addressEllipsisLabel = new EllipsisLabel("");
         addressEllipsisLabel.setFont(latoBase);
@@ -187,18 +194,20 @@ public class LaundromatDetailsPanel extends JPanel {
 
         JPanel distanceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         distanceRow.setOpaque(false);
-        JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/distancefromUser.svg", 12, 12));
+        // ADDED: use field for theme swapping
+        distIconLabel = new JLabel(iconCreator.getIcon("Icons/distancefromUser.svg", 12, 12));
         distanceLabel = new JLabel("0.0 km");
         distanceLabel.setFont(latoBase);
-        distanceRow.add(distIcon);
+        distanceRow.add(distIconLabel);
         distanceRow.add(distanceLabel);
 
         JPanel deliveryRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         deliveryRow.setOpaque(false);
-        JLabel delIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/deliveryperiod.svg", 12, 12));
+        // ADDED: use field for theme swapping
+        delIconLabel = new JLabel(iconCreator.getIcon("Icons/deliveryperiod.svg", 12, 12));
         deliveryLabel = new JLabel("1–2 days");
         deliveryLabel.setFont(latoBase);
-        deliveryRow.add(delIcon);
+        deliveryRow.add(delIconLabel);
         deliveryRow.add(deliveryLabel);
 
         innerRightPanel.add(Box.createVerticalGlue());
@@ -224,10 +233,11 @@ public class LaundromatDetailsPanel extends JPanel {
         rg.insets = new Insets(0, 0, 0, 8);
         JPanel starRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         starRow.setOpaque(false);
-        JLabel starIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/star.svg", 18, 18));
+        // ADDED: use field for theme swapping
+        starIconLabel = new JLabel(iconCreator.getIcon("Icons/lightmode/star.svg", 18, 18));
         ratingLabel = new JLabel("0.0");
         ratingLabel.setFont(fredokaTitle);
-        starRow.add(starIcon);
+        starRow.add(starIconLabel);
         starRow.add(ratingLabel);
         rightmostPanel.add(starRow, rg);
 
@@ -383,16 +393,16 @@ public class LaundromatDetailsPanel extends JPanel {
             }
         });
 
-        // ADDED: lime green hover same as laundromat cards (works in light & dark)
+        // Lime green hover same as laundromat cards (light & dark)
+        final Color limeHover = UIManager.getColor("Sidebar.hoverBackground") != null
+                ? UIManager.getColor("Sidebar.hoverBackground")
+                : new Color(0xDAEC73);
         pickupBtn.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                Color lime = UIManager.getColor("Sidebar.hoverBackground");
-                if (lime == null) lime = new Color(0xDAEC73);
-                pickupBtn.setBackground(lime);
+                pickupBtn.setBackground(limeHover);
                 pickupBtn.repaint();
             }
-
             @Override
             public void mouseExited(java.awt.event.MouseEvent e) {
                 Color bgBtn = UIManager.getColor("Button.background");
@@ -430,6 +440,7 @@ public class LaundromatDetailsPanel extends JPanel {
             applyHeaderFontSizes();
             applyThemeStyling();
             applyTextColors();
+            applyIconTheme(); // ensure icons match current theme
             // Keep initial position at top on first build only
             scrollReviewsToTop();
         });
@@ -552,8 +563,7 @@ public class LaundromatDetailsPanel extends JPanel {
             add(centerContentPanel, BorderLayout.CENTER);
         }
 
-        // update fields
-        logoLabel.setIcon(iconCreator.getIcon("Icons/lightmode/laundromatLogo.svg", LOGO_ICON_SIZE, LOGO_ICON_SIZE));
+        // update fields (icons handled by applyIconTheme)
         nameLabel.setText(data.name);
         if (addressEllipsisLabel != null) addressEllipsisLabel.setFullText(data.address);
         distanceLabel.setText(data.distance);
@@ -593,6 +603,7 @@ public class LaundromatDetailsPanel extends JPanel {
             withReviewsScrollPreserved(() -> {
                 applyThemeStyling();
                 applyTextColors();
+                applyIconTheme(); // ensure icons match current theme
             });
         });
 
@@ -668,6 +679,7 @@ public class LaundromatDetailsPanel extends JPanel {
             withReviewsScrollPreserved(() -> {
                 applyThemeStyling();
                 applyTextColors();
+                applyIconTheme(); // ensure icons match current theme
             });
         });
 
@@ -737,6 +749,46 @@ public class LaundromatDetailsPanel extends JPanel {
         if (c == null) c = UIManager.getColor("Actions.Blue");
         if (c == null) c = new Color(0x2196F3);
         return c;
+    }
+
+    // ADDED: swap icons for dark/light themes (includes address icon in header)
+    private void applyIconTheme() {
+        boolean dark = isDarkTheme();
+
+        // Header logo
+        if (logoLabel != null) {
+            Icon logo = iconCreator.getIcon(
+                    dark ? "Icons/darkmode/laundromatLogoDarkMode.svg" : "Icons/lightmode/laundromatLogo.svg",
+                    LOGO_ICON_SIZE, LOGO_ICON_SIZE
+            );
+            logoLabel.setIcon(logo);
+        }
+
+        // Address icon (12x12)
+        if (addrIconLabel != null) {
+            addrIconLabel.setIcon(iconCreator.getIcon(
+                    dark ? "Icons/darkmode/addressDarkMode.svg" : "Icons/lightmode/address.svg",
+                    12, 12));
+        }
+
+        // Distance and delivery icons (12x12)
+        if (distIconLabel != null) {
+            distIconLabel.setIcon(iconCreator.getIcon(
+                    dark ? "Icons/darkmode/distancefromUserDarkMode.svg" : "Icons/lightmode/distancefromUser.svg",
+                    12, 12));
+        }
+        if (delIconLabel != null) {
+            delIconLabel.setIcon(iconCreator.getIcon(
+                    dark ? "Icons/darkmode/deliveryperiodDarkMode.svg" : "Icons/lightmode/deliveryperiod.svg",
+                    12, 12));
+        }
+
+        // Star icon (18x18)
+        if (starIconLabel != null) {
+            starIconLabel.setIcon(iconCreator.getIcon(
+                    dark ? "Icons/darkmode/starDarkMode.svg" : "Icons/lightmode/star.svg",
+                    18, 18));
+        }
     }
 
     // More robust dark theme detection across LAFs
