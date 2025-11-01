@@ -90,7 +90,7 @@ public class LaundromatListPanel extends JPanel {
                 : getLightModeBlue();
 
         borderedWrapper.setBorder(BorderFactory.createCompoundBorder(
-                new roundedBorder(10, borderColor, 2),
+                new roundedBorder(18, borderColor, 2),
                 new EmptyBorder(20, 20, 20, 20)
         ));
 

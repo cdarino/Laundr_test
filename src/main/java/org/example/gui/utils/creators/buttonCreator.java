@@ -130,6 +130,11 @@ public class buttonCreator extends roundedPanel {
         return customFont;
     }
 
+    // Expose the effective label font (useful for aligning other UI text sizes)
+    public Font getLabelFont() {
+        return label != null ? label.getFont() : null;
+    }
+
     // Enable auto-scaling of the label font to occupy ~ratio of the button width
     public void enableAutoScaleToWidth(float ratio, float minSize, float maxSize) {
         this.autoScale = true;
