@@ -187,7 +187,7 @@ public class LaundromatDetailsPanel extends JPanel {
 
         JPanel distanceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         distanceRow.setOpaque(false);
-        JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/distancefromUser.svg", 12, 12));
+        JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/distancefromUser.svg", 12, 12));
         distanceLabel = new JLabel("0.0 km");
         distanceLabel.setFont(latoBase);
         distanceRow.add(distIcon);
@@ -195,7 +195,7 @@ public class LaundromatDetailsPanel extends JPanel {
 
         JPanel deliveryRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         deliveryRow.setOpaque(false);
-        JLabel delIcon = new JLabel(iconCreator.getIcon("Icons/deliveryperiod.svg", 12, 12));
+        JLabel delIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/deliveryperiod.svg", 12, 12));
         deliveryLabel = new JLabel("1–2 days");
         deliveryLabel.setFont(latoBase);
         deliveryRow.add(delIcon);

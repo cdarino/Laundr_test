@@ -59,7 +59,7 @@ public class ReviewCard extends roundedPanel {
         GridBagConstraints h = new GridBagConstraints();
         h.gridy = 0;
 
-        userIcon = new JLabel(iconCreator.getIcon("Icons/userIconBlue.svg", 24, 24));
+        userIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/userIconBlue.svg", 24, 24));
         userIcon.setAlignmentY(Component.CENTER_ALIGNMENT);
         h.gridx = 0;
         h.weightx = 0;

@@ -91,8 +91,8 @@ public class LaundromatCard extends roundedPanel {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
 
-    JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/distancefromUser.svg", 16, 16));
-    JLabel periodIcon = new JLabel(iconCreator.getIcon("Icons/deliveryperiod.svg", 16, 16));
+    JLabel distIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/distancefromUser.svg", 16, 16));
+    JLabel periodIcon = new JLabel(iconCreator.getIcon("Icons/lightmode/deliveryperiod.svg", 16, 16));
 
     JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
     row1.setOpaque(false);
