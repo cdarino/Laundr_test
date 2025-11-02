@@ -1,6 +1,5 @@
 package org.example.gui.panels;
 
-import org.example.database.DBConnect;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.creators.iconCreator;
