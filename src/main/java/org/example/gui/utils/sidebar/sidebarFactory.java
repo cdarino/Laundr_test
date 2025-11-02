@@ -44,7 +44,7 @@ public class sidebarFactory extends JPanel {
         topPanel.add(Box.createVerticalStrut(15));
 
         topPanel.add(new sidebarButtons("Profile",
-                iconCreator.getIcon("Icons/userIcon.svg", 24, 24),
+                iconCreator.getIcon("Icons/darkmode/userIconWhite.svg", 24, 24),
                 () -> landing.showCard("PROFILE")));
         topPanel.add(Box.createVerticalStrut(15));
 
