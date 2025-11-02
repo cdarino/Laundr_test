@@ -37,12 +37,12 @@ CREATE TABLE service (
 
 
 -- delivery riders?
-CREATE TABLE rider (
-    riderID INT PRIMARY KEY AUTO_INCREMENT,
-    riderName VARCHAR(100),
-    riderPhone VARCHAR(20),
-    status ENUM('available','busy') DEFAULT 'available'
-);
+-- CREATE TABLE rider (
+--    riderID INT PRIMARY KEY AUTO_INCREMENT,
+--    riderName VARCHAR(100),
+--   riderPhone VARCHAR(20),
+--    status ENUM('available','busy') DEFAULT 'available'
+-- );
 
 
 -- laundry orders
@@ -50,15 +50,15 @@ CREATE TABLE orders (
     orderID INT PRIMARY KEY AUTO_INCREMENT,
     custID INT,
     laundromatID INT,
-    riderID INT NULL,
+    -- riderID INT NULL,
     orderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
     pickupAddress VARCHAR(150),
     deliveryAddress VARCHAR(150),
     orderStatus ENUM('pending','accepted','in_progress','completed','cancelled') DEFAULT 'pending',
     totalAmount DECIMAL(10,2),
     FOREIGN KEY (custID) REFERENCES customer(custID),
-    FOREIGN KEY (laundromatID) REFERENCES laundromat(laundromatID),
-    FOREIGN KEY (riderID) REFERENCES rider(riderID)
+    FOREIGN KEY (laundromatID) REFERENCES laundromat(laundromatID)
+    -- FOREIGN KEY (riderID) REFERENCES rider(riderID)
 ) AUTO_INCREMENT = 1001;
 
 

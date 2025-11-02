@@ -76,6 +76,7 @@ public class Mainframe extends JFrame {
     }
 
     public void toggleTheme() {
+        // manage themes
         dark = !dark;
 
         // Take a snapshot of the current UI, switch LAF, then animate/hide the snapshot.
