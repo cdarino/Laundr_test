@@ -16,8 +16,19 @@ public class Profile extends JPanel {
     private final Landing landing;
 
     private String getIconPath(String iconName) {
-        String theme = Mainframe.dark ? "darkmode" : "lightmode";
-        return "Icons/" + theme + "/" + iconName;
+        // Use the existing theme folder structure
+        String themeFolder = Mainframe.dark ? "darkmode" : "lightmode";
+
+        // If dark mode, insert "DarkMode" before the file extension
+        String themedName = iconName;
+        if (Mainframe.dark) {
+            int dot = iconName.lastIndexOf('.');
+            boolean alreadyDark = dot > 0 && iconName.substring(0, dot).endsWith("DarkMode");
+            if (dot > 0 && !alreadyDark) {
+                themedName = iconName.substring(0, dot) + "DarkMode" + iconName.substring(dot);
+            }
+        }
+        return "Icons/" + themeFolder + "/" + themedName;
     }
 
     public Profile(Mainframe frame, Landing landing) {

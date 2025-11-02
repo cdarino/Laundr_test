@@ -3,6 +3,7 @@ package org.example.gui;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 import org.example.gui.panels.Landing;
 import org.example.gui.panels.Login;
 import org.example.gui.panels.Register;
@@ -78,14 +79,13 @@ public class Mainframe extends JFrame {
         // manage themes
         dark = !dark;
 
+        // Take a snapshot of the current UI, switch LAF, then animate/hide the snapshot.
+        FlatAnimatedLafChange.showSnapshot();
         try {
             FlatLaf.registerCustomDefaultsSource("Themes");
-            if (dark) {
-                UIManager.setLookAndFeel(new FlatDarkLaf());
-            } else {
-                UIManager.setLookAndFeel(new FlatLightLaf());
-            }
+            UIManager.setLookAndFeel(dark ? new FlatDarkLaf() : new FlatLightLaf());
 
+            // Re-apply your font and color defaults for the new LAF
             fontLoader.loadFonts();
 
             UIManager.put("defaultFont", new Font("Lato Regular", Font.PLAIN, 16));
@@ -99,12 +99,12 @@ public class Mainframe extends JFrame {
             UIManager.put("Heading.foreground", new Color (0xF8FBFD));
             UIManager.put("dashboardUser.foreground", new Color(0xDAEC73));
 
-            SwingUtilities.updateComponentTreeUI(this);
-            revalidate();
-            repaint();
-
+            // Update all open windows in one go (avoids visible partial refresh)
+            FlatLaf.updateUI();
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            FlatAnimatedLafChange.hideSnapshotWithAnimation();
         }
     }
 
