@@ -58,6 +58,7 @@ public class RatingCard extends roundedPanel {
 
         // rating combobox
         Vector<Integer> ratings = new Vector<>();
+        ratings.add(null); // explicit null added here to allow no default selection
         for (int i = 5; i >= 1; i--) {
             ratings.add(i);
         }
@@ -114,7 +115,7 @@ public class RatingCard extends roundedPanel {
         gbc.weighty = 0; // don't push the button vertically
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.SOUTHEAST; // anchor to bottom right
-        gbc.insets = new Insets(0, 30, 0, 5);
+        gbc.insets = new Insets(10, 30, 0, 5); // <--- changed: top inset is now 10px
         add(saveButton, gbc);
 
         reviewTextArea.addFocusListener(new java.awt.event.FocusAdapter() {
@@ -145,7 +146,7 @@ public class RatingCard extends roundedPanel {
         SwingUtilities.invokeLater(() -> {
             // re-apply fonts and colors when theme changes
             if (laundromatNameLabel != null) {
-                fontManager.applyHeading(laundromatNameLabel, 7);
+                fontManager.applyHeading(laundromatNameLabel, 9); // changed back to 9 based on initial request
                 fontManager.applyHeading(orderIdLabel, 13);
                 ratingComboBox.setFont(fontManager.h8());
                 reviewTextArea.setFont(fontManager.h8());

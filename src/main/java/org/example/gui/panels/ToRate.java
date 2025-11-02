@@ -81,7 +81,7 @@ public class ToRate extends JPanel {
         addRatingCard("AllKlean Laundry", "003");
         addRatingCard("Real Laundromat", "005");
         addRatingCard("Real Laundromat", "004");
-        addRatingCard("AllKlean Laundromat", "006");
+        addRatingCard("AllKlean Laundry", "006");
 
         revalidate();
         repaint();
