@@ -16,15 +16,15 @@ public class CustomerDAO {
             return false;
         }
 
-        String query = "INSERT INTO customer (custUsername, custPassword, custPhone, custAddress, custEmail) VALUES (?, ?, ?, ?, ?)";
+        String query = "INSERT INTO customer (custUsername, custPassword, custPhone, custAddress, custEmail) VALUES ('"
+                + customer.getUsername() + "', '"
+                + customer.getPassword() + "', '"
+                + customer.getPhone() + "', '"
+                + customer.getAddress() + "', '"
+                + customer.getEmail() + "')";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, customer.getUsername());
-            ps.setString(2, customer.getPassword());
-            ps.setString(3, customer.getPhone());
-            ps.setString(4, customer.getAddress());
-            ps.setString(5, customer.getEmail());
-            ps.executeUpdate();
+        try (Statement st = connection.createStatement()) {
+            st.executeUpdate(query);
             return true;
         } catch (SQLIntegrityConstraintViolationException e) {
             System.err.println("⚠ Username already exists.");
@@ -41,12 +41,11 @@ public class CustomerDAO {
             return false;
         }
 
-        String query = "SELECT * FROM customer WHERE custUsername = ? AND custPassword = ?";
+        String query = "SELECT * FROM customer WHERE custUsername = '" + username + "' AND custPassword = '" + password + "'";
 
-        try (PreparedStatement ps = connection.prepareStatement(query)) {
-            ps.setString(1, username);
-            ps.setString(2, password);
-            ResultSet rs = ps.executeQuery();
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery(query)) {
+
             return rs.next();
         } catch (SQLException e) {
             e.printStackTrace();

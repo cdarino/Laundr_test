@@ -12,9 +12,11 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Mainframe extends JFrame {
-    private static boolean dark = false;
-    private static CardLayout cardLayout;
-    private static JPanel mainPanel;
+    public static boolean dark = false;
+    private CardLayout cardLayout;
+    public JPanel mainPanel;
+
+    private String currentUser;
 
     public Mainframe() {
         fontLoader.loadFonts();
@@ -55,6 +57,7 @@ public class Mainframe extends JFrame {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
+        // add cards
         mainPanel.add(new Login(this), "LOGIN");
         mainPanel.add(new Register(this), "REGISTER");
         mainPanel.add(new Landing(this), "LANDING");
@@ -63,13 +66,16 @@ public class Mainframe extends JFrame {
         showCard("LOGIN");
     }
 
-    public static void showCard(String name) {
+    public void showCard(String name) {
+        // new landing that reads frame.getCurrentUser
+        if (name.equals("LANDING")) {
+            mainPanel.add(new Landing(this), "LANDING");
+        }
         cardLayout.show(mainPanel, name);
-        mainPanel.revalidate();
-        mainPanel.repaint();
     }
 
     public void toggleTheme() {
+        // manage themes
         dark = !dark;
 
         try {
@@ -104,6 +110,23 @@ public class Mainframe extends JFrame {
 
     public boolean isDarkMode() {
         return dark;
+    }
+
+    public void setCurrentUser(String user) {
+        this.currentUser = user;
+    }
+
+    public String getCurrentUser() {
+        return currentUser;
+    }
+
+    public void logout() {
+        setCurrentUser(null);
+        showCard("LOGIN");
+        SwingUtilities.invokeLater(() -> {
+            revalidate();
+            repaint();
+        });
     }
 
 }

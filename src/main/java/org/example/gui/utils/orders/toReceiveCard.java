@@ -1,32 +1,33 @@
 package org.example.gui.utils.orders;
 
-import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.fonts.fontManager;
 
 import javax.swing.*;
 import java.awt.*;
 
-public class orderCard extends JPanel {
+public class toReceiveCard extends JPanel {
 
     private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, etaLabel;
 
-    public orderCard(String orderId, String weight, String laundromat,
-                     String address, String price, String date) {
+    public toReceiveCard(String orderId, String weight, String laundromat,
+                         String address, String price, String eta) {
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBackground(UIManager.getColor("background"));
         setBorder(BorderFactory.createCompoundBorder(
+                // Use the original light gray border color/style
                 BorderFactory.createLineBorder(new Color(0xE5E7EB), 2, true),
                 BorderFactory.createEmptyBorder(15, 20, 15, 20)
         ));
+        // Use Integer.MAX_VALUE to allow it to fill the width of the viewport
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // left
+        // --- Left Panel ---
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setOpaque(false);
-        leftPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        leftPanel.setAlignmentY(Component.TOP_ALIGNMENT); // Align content top
 
         orderInfo = new JLabel("Order " + orderId + " | " + weight);
         laundromatLabel = new JLabel(laundromat);
@@ -39,7 +40,6 @@ public class orderCard extends JPanel {
         fontManager.applyHeading(laundromatLabel, 7);
         fontManager.applyHeading(services, 8);
 
-        // align all labels to left
         orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
         laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         services.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -50,35 +50,36 @@ public class orderCard extends JPanel {
         leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
-        // middle
-        JPanel middlePanel = new JPanel();
-        middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
-        middlePanel.setOpaque(false);
-        middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60)); // adjust spacing between columns
-        middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        // --- Right Panel ---
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setOpaque(false);
+        // Reduced left margin to give the right panel more space
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 40, 0, 0));
+        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT); // Align content top
 
         addressLabel = new JLabel("<html>" + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        etaLabel = new JLabel("<html>" + date + "</html>");
+        etaLabel = new JLabel("<html>" + eta + "</html>");
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
         fontManager.applyHeading(etaLabel, 8);
 
-        // align labels to the left
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         etaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        middlePanel.add(Box.createVerticalStrut(5));
-        middlePanel.add(addressLabel);
-        middlePanel.add(Box.createVerticalStrut(10));
-        middlePanel.add(paymentLabel);
-        middlePanel.add(Box.createVerticalStrut(10));
-        middlePanel.add(etaLabel);
+        rightPanel.add(Box.createVerticalStrut(5));
+        rightPanel.add(addressLabel);
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(paymentLabel);
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(etaLabel);
 
         add(leftPanel);
-        add(middlePanel);
+        add(Box.createHorizontalGlue()); // Pushes the right panel to the edge
+        add(rightPanel);
     }
 
     @Override

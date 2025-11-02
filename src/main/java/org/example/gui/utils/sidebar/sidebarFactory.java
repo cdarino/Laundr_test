@@ -17,7 +17,7 @@ public class sidebarFactory extends JPanel {
     private static final int SIDEBAR_WIDTH = 200;
     private boolean collapsed = false;
 
-    public sidebarFactory(Landing landing) {
+    public sidebarFactory(Landing landing, Mainframe frame) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(true);
         setBackground(UIManager.getColor("Menu.background"));
@@ -44,7 +44,7 @@ public class sidebarFactory extends JPanel {
         topPanel.add(Box.createVerticalStrut(15));
 
         topPanel.add(new sidebarButtons("Profile",
-                iconCreator.getIcon("Icons/darkmode/userIconWhite.svg", 24, 24),
+                iconCreator.getIcon("Icons/userIcon.svg", 24, 24),
                 () -> landing.showCard("PROFILE")));
         topPanel.add(Box.createVerticalStrut(15));
 
@@ -60,7 +60,7 @@ public class sidebarFactory extends JPanel {
 
         bottomPanel.add(new sidebarButtons("Logout",
                 iconCreator.getIcon("Icons/logout.svg", 24, 24),
-                () -> Mainframe.showCard("LOGIN")));
+                frame::logout));
 
         bottomPanel.add(Box.createVerticalStrut(10));
 

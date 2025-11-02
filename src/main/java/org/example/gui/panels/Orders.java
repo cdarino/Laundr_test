@@ -37,6 +37,7 @@ public class Orders extends JPanel {
         orderStateButton ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing"));
         orderStateButton completedBtn = new orderStateButton("Completed", () -> showCard("completed"));
 
+        //default pressed set to ongoing
         SwingUtilities.invokeLater(() -> {
             ongoingBtn.setBackground(UIManager.getColor("Sidebar.hoverBackground"));
             try {
@@ -89,19 +90,27 @@ public class Orders extends JPanel {
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
 
-        addOngoingOrder("Order #001", " Real Address in Davao City, Real St. 123, Building 456 ", "Real Laundromat",
+        addOngoingOrder("Order #001", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
                 "2 kg",
                 "₱200.00", "10/10/2025");
 
-        addOngoingOrder("Order #001", " Real Address in Davao City, Real St. 123, Building 456 ", "Real Laundromat",
+        addOngoingOrder("Order #002", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
                 "2 kg",
                 "₱200.00", "10/10/2025");
 
-        addOngoingOrder("Order #001", " Real Address in Davao City, Real St. 123, Building 456 ", "Real Laundromat",
+        addOngoingOrder("Order #004", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
                 "2 kg",
                 "₱200.00", "10/10/2025");
 
-        addCompletedOrder("Order #001", " Real Address in Davao City, Real St. 123, Building 456 ", "Real Laundromat",
+        addOngoingOrder("Order #005", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
+                "2 kg",
+                "₱200.00", "10/10/2025");
+
+        addOngoingOrder("Order #006", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
+                "2 kg",
+                "₱200.00", "10/10/2025");
+
+        addCompletedOrder("Order #003", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
                 "2 kg",
                 "₱200.00", "10/10/2025");
     }

@@ -1,5 +1,6 @@
 package org.example.gui.panels;
 
+import org.example.gui.Mainframe;
 import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.creators.roundedBorder;
@@ -11,8 +12,17 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class Profile extends JPanel {
+    private final Mainframe frame;
+    private final Landing landing;
 
-    public Profile() {
+    private String getIconPath(String iconName) {
+        String theme = Mainframe.dark ? "darkmode" : "lightmode";
+        return "Icons/" + theme + "/" + iconName;
+    }
+
+    public Profile(Mainframe frame, Landing landing) {
+        this.frame = frame;
+        this.landing = landing;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
         setBorder(BorderFactory.createEmptyBorder(40, 50, 20, 50));
@@ -30,26 +40,19 @@ public class Profile extends JPanel {
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
         topPanel.setOpaque(false);
 
-        ImageIcon im = new ImageIcon(getClass().getResource("/Pictures/profile pictures/pfp1.png"));
-        Image img = im.getImage().getScaledInstance(90, 90, Image.SCALE_SMOOTH);
-        JLabel profilePic = new JLabel(new ImageIcon(img));
-        profilePic.setPreferredSize(new Dimension(90, 90));
-        profilePic.setMaximumSize(new Dimension(90, 90));
-        profilePic.setAlignmentY(Component.CENTER_ALIGNMENT);
-
         JPanel namePanel = new JPanel();
         namePanel.setLayout(new BoxLayout(namePanel, BoxLayout.Y_AXIS));
         namePanel.setOpaque(false);
         namePanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
         namePanel.setAlignmentY(Component.CENTER_ALIGNMENT);
 
-        JLabel nameLabel = new JLabel("johndoe123");
+        String username = frame.getCurrentUser();
+        JLabel nameLabel = new JLabel(username);
         fontManager.applyHeading(nameLabel, 5);
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel editProfileLabel = new JLabel("✏ Edit Profile");
+        JLabel editProfileLabel = new JLabel("Edit Profile");
         fontManager.applyHeading(editProfileLabel, 6);
-        editProfileLabel.setForeground(Color.DARK_GRAY);
         editProfileLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         editProfileLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -57,25 +60,16 @@ public class Profile extends JPanel {
         editProfileLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                System.out.println("click");
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                editProfileLabel.setForeground(new Color(30, 144, 255));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                editProfileLabel.setForeground(Color.DARK_GRAY);
+                landing.showCard("EDIT");
             }
         });
 
+        editProfileLabel.setIcon(iconCreator.getIcon(getIconPath("edit.svg"), 18, 18));
+        editProfileLabel.setIconTextGap(6);
         namePanel.add(nameLabel);
         namePanel.add(Box.createVerticalStrut(6));
         namePanel.add(editProfileLabel);
 
-        topPanel.add(profilePic);
         topPanel.add(namePanel);
 
         return topPanel;
@@ -91,10 +85,9 @@ public class Profile extends JPanel {
                 BorderFactory.createEmptyBorder(40, 20, 20, 20)
         ));
 
-        middlePanel.add(createIconLabelPanel("Icons/lightmode/bookmark.svg", "Saved Laundromats"));
-        middlePanel.add(createIconLabelPanel("Icons/lightmode/wallet.svg", "Digital Wallet"));
-        middlePanel.add(createIconLabelPanel("Icons/lightmode/toReceive.svg", "To Receive"));
-        middlePanel.add(createIconLabelPanel("Icons/lightmode/star.svg", "To Rate"));
+        middlePanel.add(createIconLabelPanel(getIconPath("wallet.svg"), "Digital Wallet"));
+        middlePanel.add(createIconLabelPanel(getIconPath("toReceive.svg"), "To Receive"));
+        middlePanel.add(createIconLabelPanel(getIconPath("star.svg"), "To Rate"));
 
         middlePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
@@ -121,24 +114,6 @@ public class Profile extends JPanel {
         return bottomPanel;
     }
 
-    //saved panel (the bottom left)
-    private roundedPanel createSavedPanel() {
-        roundedPanel savedPanel = new roundedPanel();
-        savedPanel.setLayout(new BoxLayout(savedPanel, BoxLayout.Y_AXIS));
-        savedPanel.setBackground(UIManager.getColor("Profile.background"));
-        savedPanel.setBorder(BorderFactory.createCompoundBorder(
-                new roundedBorder(20, UIManager.getColor("listBorder"), 1),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
-        ));
-
-        savedPanel.add(Box.createVerticalGlue());
-        savedPanel.add(createIconLabelPanel("Icons/lightmode/bookmark.svg", "Saved Laundromats"));
-        savedPanel.add(Box.createVerticalStrut(10));
-        savedPanel.add(Box.createVerticalGlue());
-
-        return savedPanel;
-    }
-
     //bottom right panel
     private roundedPanel createSupportPanel() {
         roundedPanel supportPanel = new roundedPanel();
@@ -154,16 +129,16 @@ public class Profile extends JPanel {
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         titlePanel.setOpaque(false);
 
-        JLabel supportTitle = new JLabel("Support");
-        fontManager.applyHeading(supportTitle, 6);
-        supportTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titlePanel.add(supportTitle);
+        JLabel infoLabel = new JLabel("Information");
+        fontManager.applyHeading(infoLabel, 6);
+        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titlePanel.add(infoLabel);
 
         supportPanel.add(titlePanel);
         supportPanel.add(Box.createVerticalStrut(15));
-        supportPanel.add(createSupportItem("Icons/lightmode/help.svg", "Help Center"));
+        supportPanel.add(createSupportItem(getIconPath("email.svg"), "laundr@gmail.com"));
         supportPanel.add(Box.createVerticalStrut(10));
-        supportPanel.add(createSupportItem("Icons/lightmode/info.svg", "About Laundr"));
+        supportPanel.add(createSupportItem(getIconPath("phone.svg"), "09887654322 / 274-982"));
         supportPanel.add(Box.createVerticalGlue());
 
         return supportPanel;
@@ -186,10 +161,38 @@ public class Profile extends JPanel {
         panel.add(Box.createVerticalStrut(5));
         panel.add(textLabel);
 
+        panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                switch (text) {
+                    case "Saved Laundromats":
+                        landing.showCard("LAUNDROMATS");
+                        System.out.println("laundromat");
+                        break;
+                    case "Digital Wallet":
+                        landing.showCard("WALLET");
+                        System.out.println("wallet");
+                        break;
+                    case "To Receive":
+                        landing.showCard("RECEIVE");
+                        System.out.println("receive");
+                        break;
+                    case "To Rate":
+                        landing.showCard("RATE");
+                        System.out.println("rate");
+                        break;
+                    default:
+                        System.out.println("Unknown card: " + text);
+                        break;
+                }
+            }
+        });
+
         return panel;
     }
 
-    //support icons
+    //helper for support icons
     private JPanel createSupportItem(String iconPath, String text) {
         JPanel itemPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         itemPanel.setOpaque(false);
@@ -202,5 +205,21 @@ public class Profile extends JPanel {
         itemPanel.add(textLabel);
 
         return itemPanel;
+    }
+
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        // refresh icons
+        SwingUtilities.invokeLater(() -> {
+            removeAll();
+            add(createTopSection());
+            add(Box.createVerticalStrut(60));
+            add(createMiddleSection());
+            add(Box.createVerticalStrut(40));
+            add(createBottomSection());
+            revalidate();
+            repaint();
+        });
     }
 }

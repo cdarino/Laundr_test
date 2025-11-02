@@ -25,16 +25,19 @@ public class Landing extends JPanel {
         centerLayout = new CardLayout();
         centerPanel = new JPanel(centerLayout);
 
-        centerPanel.add(new Dashboard(), "DASHBOARD");
+        // adding cards to landing
+        centerPanel.add(new Dashboard(frame), "DASHBOARD");
+        centerPanel.add(new Profile(frame, this), "PROFILE");
         centerPanel.add(new Laundromats(), "LAUNDROMATS");
-        centerPanel.add(new Profile(), "PROFILE");
-        centerPanel.add(new EditProfile(), "EDIT");
-        centerPanel.add(new PickupPanel(), "PICKUP");
+        centerPanel.add(new EditProfile(frame, this), "EDIT");
+        centerPanel.add(new DigitalWallet(frame, this), "WALLET");
+        centerPanel.add(new ToReceive(this), "RECEIVE");
+        centerPanel.add(new ToRate(this), "RATE");
         centerPanel.add(new Orders(), "ORDERS");
 
         add(centerPanel, BorderLayout.CENTER);
 
-        sidebar = new sidebarFactory(this);
+        sidebar = new sidebarFactory(this, frame);
         add(sidebar, BorderLayout.WEST);
 
         centerLayout.show(centerPanel, "DASHBOARD");
@@ -53,6 +56,14 @@ public class Landing extends JPanel {
             revalidate();
             repaint();
         }
+    }
+
+    public void showDashboard() {
+        centerLayout.show(this, "DASHBOARD");
+    }
+
+    public void showProfile() {
+        centerLayout.show(this, "PROFILE");
     }
 
     @Override
