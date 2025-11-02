@@ -29,6 +29,19 @@ public class fontManager {
         return UIManager.getFont("Profile.font");
     }
 
+    public static Font h7() {
+        return UIManager.getFont("defaultFont");
+
+    }
+
+    public static Font h8() {
+        return h7().deriveFont(12f);
+    }
+
+    public static Font h9() {
+        return h7().deriveFont(20f);
+    }
+
     public static Color h1Color() {
         return UIManager.getColor("Heading.foreground");
     }
@@ -79,6 +92,18 @@ public class fontManager {
             case 6 ->{
                 label.setFont(h6());
                 label.setForeground(h6Color());
+            }
+            case 7 ->{
+                label.setFont(h7());
+                label.setForeground(h5Color());
+            }
+            case 8 ->{
+                label.setFont(h8());
+                label.setForeground(h5Color());
+            }
+            case 9 ->{
+                label.setFont(h9());
+                label.setForeground(h5Color());
             }
         }
     }

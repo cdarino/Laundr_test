@@ -1,47 +1,45 @@
 package org.example.gui.utils.orders;
 
 import org.example.gui.utils.creators.buttonCreator;
+import org.example.gui.utils.fonts.fontManager;
 
 import javax.swing.*;
 import java.awt.*;
 
 public class orderCard extends JPanel {
 
+    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, etaLabel;
+
     public orderCard(String orderId, String weight, String laundromat,
                      String address, String price, String date) {
 
-        // === CARD STYLE ===
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBackground(UIManager.getColor("background"));
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(0xE5E7EB), 2, true),
                 BorderFactory.createEmptyBorder(15, 20, 15, 20)
         ));
-        setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+        setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // === LEFT COLUMN ===
+        // left
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setOpaque(false);
         leftPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        JLabel orderInfo = new JLabel("Order " + orderId + " | " + weight);
-        JLabel laundromatLabel = new JLabel(laundromat);
-        JLabel services = new JLabel("<html><ul style='margin:0;padding-left:15;'>"
+        orderInfo = new JLabel("Order " + orderId + " | " + weight);
+        laundromatLabel = new JLabel(laundromat);
+        services = new JLabel("<html><ul style='margin:0;padding-left:15;'>"
                 + "<li>Wash and Fold</li>"
                 + "<li>Dry Clean</li>"
                 + "</ul></html>");
 
-        orderInfo.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        laundromatLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        services.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        fontManager.applyHeading(orderInfo,7);
+        fontManager.applyHeading(laundromatLabel, 7);
+        fontManager.applyHeading(services, 8);
 
-        orderInfo.setForeground(new Color(0x333333));
-        laundromatLabel.setForeground(new Color(0x555555));
-        services.setForeground(new Color(0x555555));
-
-        // Align all labels to left
+        // align all labels to left
         orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
         laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         services.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -52,27 +50,22 @@ public class orderCard extends JPanel {
         leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
-        // === MIDDLE COLUMN ===
+        // middle
         JPanel middlePanel = new JPanel();
         middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
         middlePanel.setOpaque(false);
         middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60)); // adjust spacing between columns
         middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        JLabel addressLabel = new JLabel("<html>" + address + "</html>");
-        JLabel paymentLabel = new JLabel("<html>" + price + "</html>");
-        JLabel etaLabel = new JLabel("<html>" + date + "</html>");
+        addressLabel = new JLabel("<html>" + address + "</html>");
+        paymentLabel = new JLabel("<html>" + price + "</html>");
+        etaLabel = new JLabel("<html>" + date + "</html>");
 
-        Font midFont = new Font("Segoe UI", Font.PLAIN, 12);
-        addressLabel.setFont(midFont);
-        paymentLabel.setFont(midFont);
-        etaLabel.setFont(midFont);
+        fontManager.applyHeading(addressLabel, 8);
+        fontManager.applyHeading(paymentLabel, 8);
+        fontManager.applyHeading(etaLabel, 8);
 
-        addressLabel.setForeground(new Color(0x333333));
-        paymentLabel.setForeground(new Color(0x333333));
-        etaLabel.setForeground(new Color(0x333333));
-
-        // Align these labels left too
+        // align labels to the left
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         etaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -84,31 +77,26 @@ public class orderCard extends JPanel {
         middlePanel.add(Box.createVerticalStrut(10));
         middlePanel.add(etaLabel);
 
-        // === RIGHT COLUMN ===
-        JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
-        rightPanel.setOpaque(false);
-        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT);
-
-        buttonCreator detailsBtn = new buttonCreator("Order Details", "Button.font", () -> {
-            System.out.println("Order Details clicked for " + orderId);
-        });
-
-        buttonCreator statusBtn = new buttonCreator("Order Status", "Button.font", () -> {
-            System.out.println("Order Status clicked for " + orderId);
-        });
-
-        detailsBtn.setMaximumSize(new Dimension(130, 60));
-        statusBtn.setMaximumSize(new Dimension(130, 60));
-
-        rightPanel.add(Box.createVerticalStrut(5));
-        rightPanel.add(detailsBtn);
-        rightPanel.add(Box.createVerticalStrut(10));
-        rightPanel.add(statusBtn);
-
-        // === ADD TO CARD ===
         add(leftPanel);
         add(middlePanel);
-        add(rightPanel);
+    }
+
+    @Override
+    public void updateUI() {
+        super.updateUI();
+
+        SwingUtilities.invokeLater(() -> {
+            if (orderInfo != null) {
+                fontManager.applyHeading(orderInfo, 7);
+                fontManager.applyHeading(laundromatLabel, 7);
+                fontManager.applyHeading(services, 8);
+                fontManager.applyHeading(addressLabel, 8);
+                fontManager.applyHeading(paymentLabel, 8);
+                fontManager.applyHeading(etaLabel, 8);
+            }
+
+            revalidate();
+            repaint();
+        });
     }
 }

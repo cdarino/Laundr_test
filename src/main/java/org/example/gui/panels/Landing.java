@@ -25,10 +25,11 @@ public class Landing extends JPanel {
         centerLayout = new CardLayout();
         centerPanel = new JPanel(centerLayout);
 
-        centerPanel.add(new Dashboard(), "DASHBOARD");
-        centerPanel.add(new Profile(frame), "PROFILE");
+        // adding cards to landing
+        centerPanel.add(new Dashboard(frame), "DASHBOARD");
+        centerPanel.add(new Profile(frame, this), "PROFILE");
         centerPanel.add(new Laundromats(), "LAUNDROMATS");
-        centerPanel.add(new EditProfile(frame), "EDIT");
+        centerPanel.add(new EditProfile(frame, this), "EDIT");
         centerPanel.add(new DigitalWallet(), "WALLET");
         centerPanel.add(new ToReceive(), "RECEIVE");
         centerPanel.add(new ToRate(), "RATE");
@@ -36,7 +37,7 @@ public class Landing extends JPanel {
 
         add(centerPanel, BorderLayout.CENTER);
 
-        sidebar = new sidebarFactory(this);
+        sidebar = new sidebarFactory(this, frame);
         add(sidebar, BorderLayout.WEST);
 
         centerLayout.show(centerPanel, "DASHBOARD");

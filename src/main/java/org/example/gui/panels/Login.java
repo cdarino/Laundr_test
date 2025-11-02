@@ -129,12 +129,18 @@ public class Login extends JPanel {
             boolean success = dao.validateLogin(username, password);
 
             if (success) {
+                frame.setCurrentUser(username);
+
                 JOptionPane.showMessageDialog(this,
                         "Login successful!",
                         "Success",
                         JOptionPane.INFORMATION_MESSAGE);
 
                 frame.showCard("LANDING");
+
+                // clear fields
+                usernameField.setText("");
+                passwordField.setText("");
             } else {
                 JOptionPane.showMessageDialog(this,
                         "Invalid username or password.",

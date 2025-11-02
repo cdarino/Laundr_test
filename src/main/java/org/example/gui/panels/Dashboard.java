@@ -1,5 +1,6 @@
 package org.example.gui.panels;
 
+import org.example.database.DBConnect;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.dashboard.recommendations.laundromatsNearUser;
 import org.example.gui.utils.dashboard.recommendations.recentOrders;
@@ -17,8 +18,10 @@ public class Dashboard extends JPanel {
     private recentOrders rightPanel;
 
     private JLabel usernameLabel;
+    private final Mainframe frame;
 
-    public Dashboard() {
+    public Dashboard(Mainframe frame) {
+        this.frame = frame;
         setOpaque(true);
         setBackground(UIManager.getColor("background"));
         setLayout(new BorderLayout());
@@ -32,7 +35,8 @@ public class Dashboard extends JPanel {
         mainWrapper.setLayout(new BoxLayout(mainWrapper, BoxLayout.Y_AXIS));
         mainWrapper.setBorder(BorderFactory.createEmptyBorder(TOP_MARGIN, SIDE_MARGIN, 40, SIDE_MARGIN));
 
-        welcomeCard = new welcomeCard("username");
+        String username = frame.getCurrentUser();
+        welcomeCard = new welcomeCard(username);
         welcomeCard.setAlignmentX(Component.CENTER_ALIGNMENT);
         welcomeCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
         mainWrapper.add(welcomeCard);
