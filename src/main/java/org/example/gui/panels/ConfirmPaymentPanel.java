@@ -6,6 +6,8 @@ import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.fonts.fontLoader;
 import org.example.gui.utils.fonts.fontManager;
+import org.example.database.CustomerDAO;
+import org.example.database.DBConnect;
 import com.formdev.flatlaf.FlatLaf;
 
 import javax.swing.*;
@@ -13,16 +15,14 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.sql.Connection;
 
 public class ConfirmPaymentPanel extends JPanel {
-    // Background color (never changes)
     private static final Color FIXED_BACKGROUND = new Color(245, 245, 245);
     
-    // Section proportions (60% payment, 20% spacing, 20% summary)
     private static final double PAYMENT_RATIO = 0.80;
     private static final double SUMMARY_RATIO = 0.20;
     
-    // Spacing constants
     private static final int SECTION_GAP = 20;
     private static final int PADDING = 20;
     
@@ -31,17 +31,21 @@ public class ConfirmPaymentPanel extends JPanel {
     
     // Payment section components
     private JLabel paymentTitleLabel;
-    private JLabel paymentMethodLabel, payViaLabel, addressTextLabel;
+    private JLabel paymentMethodLabel, payViaLabel, phoneNumberLabel, addressTextLabel;
     private JRadioButton cashlessBtn, cashOnPickupBtn;
     private ButtonGroup paymentMethodGroup;
-    private JComboBox<String> paymentAppCombo;
+    private JComboBox<PaymentAppItem> paymentAppCombo;
+    private JPanel phoneNumberPanel;
+    private JLabel phonePrefix;
+    private JTextField phoneNumberField;
     private JLabel addressIconLabel, addressValueLabel;
     
-    // Summary section components (copied from PickupPanel)
+    // Summary section components
     private JLabel summaryTitleLabel;
     private JLabel selectedServiceLabel, quantitySummaryLabel, separationSummaryLabel;
     private JTextArea instructionsSummaryArea;
     private JPanel summaryPanel;
+    private JLabel instructionsHeaderLabel;
     
     // Bottom buttons
     private buttonCreator goBackBtn, confirmPaymentBtn;
@@ -54,42 +58,41 @@ public class ConfirmPaymentPanel extends JPanel {
     private String separationText;
     private String instructionsText;
     private String userAddress;
+    private String loggedInUsername;
 
     public ConfirmPaymentPanel(String services, String quantity, String separation, String instructions, String address) {
         this.servicesText = services;
         this.quantityText = quantity;
         this.separationText = separation;
         this.instructionsText = instructions;
-        this.userAddress = address != null ? address : "No address on file";
         
-        // Load fonts first
+        // Fetch address from database
+        this.userAddress = fetchUserAddress();
+        if (this.userAddress == null || this.userAddress.trim().isEmpty()) {
+            this.userAddress = address != null ? address : "No address on file";
+        }
+        
         fontLoader.loadFonts();
         
         setLayout(new BorderLayout());
         setBackground(FIXED_BACKGROUND);
         
-        // Main container with padding
         mainContainer = new JPanel(new GridBagLayout());
-        mainContainer.setOpaque(false);
+        mainContainer.setOpaque(true);
         mainContainer.setBorder(new EmptyBorder(PADDING, 100, PADDING, PADDING));
         
-        // Create sections
         paymentSection = createPaymentSection();
         summarySection = createSummarySection();
         
-        // Layout sections
         layoutSections();
         
-        // Create bottom buttons
         JPanel bottomPanel = createBottomButtons();
         
         add(mainContainer, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
         
-        // Mark as initialized
         isInitialized = true;
         
-        // Listen for theme changes
         UIManager.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
@@ -99,8 +102,21 @@ public class ConfirmPaymentPanel extends JPanel {
             }
         });
         
-        // Initial theme color update
         updateThemeColors();
+    }
+    
+    private String fetchUserAddress() {
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null) {
+                // TODO: Get logged in username from session/auth manager
+                // CustomerDAO dao = new CustomerDAO(conn);
+                // return dao.getAddress(loggedInUsername);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
     
     private void layoutSections() {
@@ -110,20 +126,17 @@ public class ConfirmPaymentPanel extends JPanel {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.gridy = 0;
         
-        // Payment section (60%)
         gbc.gridx = 0;
         gbc.weightx = PAYMENT_RATIO;
         gbc.weighty = 1.0;
         gbc.insets = new Insets(0, 0, 0, SECTION_GAP);
         mainContainer.add(paymentSection, gbc);
         
-        // Spacer/Gap (20%)
         gbc.gridx = 1;
         gbc.weightx = 0.20;
         gbc.insets = new Insets(0, 0, 0, 0);
         mainContainer.add(Box.createHorizontalGlue(), gbc);
         
-        // Summary section on far right (20%)
         gbc.gridx = 2;
         gbc.weightx = SUMMARY_RATIO;
         gbc.insets = new Insets(0, 0, 0, 0);
@@ -134,34 +147,32 @@ public class ConfirmPaymentPanel extends JPanel {
     }
     
     private roundedPanel createPaymentSection() {
-        roundedPanel section = new roundedPanel(16);
+        JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
+        outerContainer.setOpaque(true);
+        
+        paymentTitleLabel = new JLabel("Confirm Payment");
+        paymentTitleLabel.setFont(fontManager.h2());
+        paymentTitleLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
+        outerContainer.add(paymentTitleLabel, BorderLayout.NORTH);
+        
+        roundedPanel section = new roundedPanel(18);
         section.setLayout(new BorderLayout(10, 10));
-        section.setBackground(Color.WHITE);
         section.setBorder(BorderFactory.createCompoundBorder(
-            new roundedBorder(16, new Color(200, 200, 200), 1),
+            new roundedBorder(18, getAccentBorderColor(), 2),
             new EmptyBorder(15, 15, 15, 15)
         ));
         
-        // Title
-        paymentTitleLabel = new JLabel("Confirm Payment");
-        paymentTitleLabel.setFont(fontManager.h2());
-        paymentTitleLabel.setForeground(Color.BLACK);
-        section.add(paymentTitleLabel, BorderLayout.NORTH);
-        
-        // Payment panel
         JPanel paymentPanel = new JPanel();
         paymentPanel.setLayout(new BoxLayout(paymentPanel, BoxLayout.Y_AXIS));
-        paymentPanel.setOpaque(false);
+        paymentPanel.setOpaque(true);
         paymentPanel.setBorder(new EmptyBorder(10, 5, 10, 5));
         
-        // Payment Method Label
         paymentMethodLabel = new JLabel("Payment Method");
         paymentMethodLabel.setFont(UIManager.getFont("Label.font"));
         paymentMethodLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentPanel.add(paymentMethodLabel);
         paymentPanel.add(Box.createVerticalStrut(10));
         
-        // Payment Method Radio Buttons
         JPanel methodRadioPanel = new JPanel(new GridLayout(1, 2, 20, 0));
         methodRadioPanel.setOpaque(false);
         methodRadioPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -185,24 +196,23 @@ public class ConfirmPaymentPanel extends JPanel {
         paymentPanel.add(methodRadioPanel);
         paymentPanel.add(Box.createVerticalStrut(20));
         
-        // Pay Via Label
         payViaLabel = new JLabel("Pay via");
         payViaLabel.setFont(UIManager.getFont("Label.font"));
         payViaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentPanel.add(payViaLabel);
         paymentPanel.add(Box.createVerticalStrut(8));
         
-        // Payment App Dropdown
-        String[] paymentApps = {
-            "Select Payment App",
-            "GCash",
-            "Maya",
-            "PayPal",
-            "ShopeePay",
-            "GrabPay"
+        PaymentAppItem[] paymentApps = {
+            new PaymentAppItem("Select Payment App", null),
+            new PaymentAppItem("GCash", "Icons/apps/gcash.svg"),
+            new PaymentAppItem("Maya", "Icons/apps/paymaya.svg"),
+            new PaymentAppItem("PayPal", "Icons/apps/paypal.svg"),
+            new PaymentAppItem("ShopeePay", "Icons/apps/shopeepay.svg"),
+            new PaymentAppItem("GrabPay", "Icons/apps/grabpay.svg")
         };
         
         paymentAppCombo = new JComboBox<>(paymentApps);
+        paymentAppCombo.setRenderer(new PaymentAppRenderer());
         paymentAppCombo.setFont(UIManager.getFont("ComboBox.font"));
         paymentAppCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         paymentAppCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -215,23 +225,59 @@ public class ConfirmPaymentPanel extends JPanel {
         comboPanel.add(paymentAppCombo);
         
         paymentPanel.add(comboPanel);
+        paymentPanel.add(Box.createVerticalStrut(12));
+        
+        phoneNumberLabel = new JLabel("Phone Number");
+        phoneNumberLabel.setFont(UIManager.getFont("Label.font"));
+        phoneNumberLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        phoneNumberPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        phoneNumberPanel.setOpaque(false);
+        phoneNumberPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        phoneNumberPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        
+        phonePrefix = new JLabel("+63 ");
+        phonePrefix.setFont(UIManager.getFont("TextField.font"));
+        phonePrefix.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 1, 1, 0, new Color(200, 200, 200)),
+            new EmptyBorder(5, 8, 5, 2)
+        ));
+        phonePrefix.setOpaque(true);
+        phonePrefix.setBackground(UIManager.getColor("TextField.background"));
+        
+        phoneNumberField = new JTextField(12);
+        phoneNumberField.setFont(UIManager.getFont("TextField.font"));
+        phoneNumberField.setPreferredSize(new Dimension(180, 32));
+        phoneNumberField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 1, 1, new Color(200, 200, 200)),
+            new EmptyBorder(5, 2, 5, 8)
+        ));
+        
+        phoneNumberPanel.add(phonePrefix);
+        phoneNumberPanel.add(phoneNumberField);
+        phoneNumberPanel.setVisible(false);
+        
+        paymentPanel.add(phoneNumberLabel);
+        phoneNumberLabel.setVisible(false);
+        paymentPanel.add(Box.createVerticalStrut(8));
+        paymentPanel.add(phoneNumberPanel);
         paymentPanel.add(Box.createVerticalStrut(20));
         
-        // Address Label
         addressTextLabel = new JLabel("Address");
         addressTextLabel.setFont(UIManager.getFont("Label.font"));
         addressTextLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentPanel.add(addressTextLabel);
         paymentPanel.add(Box.createVerticalStrut(10));
         
-        // Address with Icon - using same logic as PickupPanel ServiceButton
         JPanel addressPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         addressPanel.setOpaque(false);
         addressPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         addressPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         
-        // Load icon using iconCreator - same as PickupPanel ServiceButton
-        Icon locationIcon = iconCreator.getIcon("Icons/lightmode/address.svg", 20, 20);
+        Icon locationIcon = iconCreator.getIcon(
+            isDarkTheme() ? "Icons/darkmode/addressDarkMode.svg" : "Icons/lightmode/address.svg",
+            20, 20
+        );
         addressIconLabel = new JLabel(locationIcon);
         addressPanel.add(addressIconLabel);
         
@@ -245,43 +291,66 @@ public class ConfirmPaymentPanel extends JPanel {
         
         section.add(paymentPanel, BorderLayout.CENTER);
         
-        // Add listeners
+        outerContainer.add(section, BorderLayout.CENTER);
+        
+        roundedPanel wrapper = new roundedPanel(0);
+        wrapper.setLayout(new BorderLayout());
+        wrapper.setOpaque(true);
+        wrapper.add(outerContainer, BorderLayout.CENTER);
+        
         cashlessBtn.addActionListener(e -> {
             paymentAppCombo.setEnabled(true);
             paymentAppCombo.setSelectedIndex(0);
+            updatePhoneNumberVisibility();
         });
         
         cashOnPickupBtn.addActionListener(e -> {
             paymentAppCombo.setEnabled(false);
             paymentAppCombo.setSelectedIndex(0);
+            phoneNumberLabel.setVisible(false);
+            phoneNumberPanel.setVisible(false);
+            paymentPanel.revalidate();
+            paymentPanel.repaint();
         });
         
-        return section;
+        paymentAppCombo.addActionListener(e -> updatePhoneNumberVisibility());
+        
+        return wrapper;
     }
     
-    // COPIED DIRECTLY FROM PickupPanel.java - createSummarySection()
+    private void updatePhoneNumberVisibility() {
+        boolean showPhone = cashlessBtn.isSelected() && paymentAppCombo.getSelectedIndex() > 0;
+        phoneNumberLabel.setVisible(showPhone);
+        phoneNumberPanel.setVisible(showPhone);
+        
+        Container parent = phoneNumberPanel.getParent();
+        if (parent != null) {
+            parent.revalidate();
+            parent.repaint();
+        }
+    }
+    
     private roundedPanel createSummarySection() {
-        roundedPanel section = new roundedPanel(16);
+        JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
+        outerContainer.setOpaque(true);
+        
+        summaryTitleLabel = new JLabel("Order Summary");
+        summaryTitleLabel.setFont(fontManager.h2());
+        summaryTitleLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
+        outerContainer.add(summaryTitleLabel, BorderLayout.NORTH);
+        
+        roundedPanel section = new roundedPanel(18);
         section.setLayout(new BorderLayout(10, 10));
-        section.setBackground(Color.WHITE);
         section.setBorder(BorderFactory.createCompoundBorder(
-            new roundedBorder(16, new Color(200, 200, 200), 1),
+            new roundedBorder(18, getAccentBorderColor(), 2),
             new EmptyBorder(15, 15, 15, 15)
         ));
         
-        // Title
-        summaryTitleLabel = new JLabel("Order Summary");
-        summaryTitleLabel.setFont(fontManager.h2());
-        summaryTitleLabel.setForeground(Color.BLACK); // Always black
-        section.add(summaryTitleLabel, BorderLayout.NORTH);
-        
-        // Summary panel
         summaryPanel = new JPanel();
         summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(false);
+        summaryPanel.setOpaque(true);
         summaryPanel.setBorder(new EmptyBorder(5, 0, 5, 0));
         
-        // Keep the services text as-is from PickupPanel (already formatted with bullets and line breaks)
         selectedServiceLabel = createSummaryLabel(servicesText);
         quantitySummaryLabel = createSummaryLabel(quantityText);
         separationSummaryLabel = createSummaryLabel(separationText);
@@ -293,8 +362,7 @@ public class ConfirmPaymentPanel extends JPanel {
         summaryPanel.add(separationSummaryLabel);
         summaryPanel.add(Box.createVerticalStrut(15));
         
-        // Instructions Summary - using JTextArea to match Details section styling
-        JLabel instructionsHeaderLabel = new JLabel("Instructions:");
+        instructionsHeaderLabel = new JLabel("Instructions:");
         instructionsHeaderLabel.setFont(UIManager.getFont("Label.font"));
         instructionsHeaderLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         summaryPanel.add(instructionsHeaderLabel);
@@ -306,7 +374,6 @@ public class ConfirmPaymentPanel extends JPanel {
         instructionsSummaryArea.setWrapStyleWord(true);
         instructionsSummaryArea.setEditable(false);
         instructionsSummaryArea.setFont(UIManager.getFont("TextArea.font"));
-        // Use rounded border like Details section
         instructionsSummaryArea.setBorder(BorderFactory.createCompoundBorder(
             new roundedBorder(10, new Color(200, 200, 200), 1),
             new EmptyBorder(8, 8, 8, 8)
@@ -324,19 +391,24 @@ public class ConfirmPaymentPanel extends JPanel {
         summaryPanel.add(instructionsSummaryScroll);
         summaryPanel.add(Box.createVerticalGlue());
         
-        // Wrap in scroll pane to handle overflow - vertical only
         JScrollPane summaryScroll = new JScrollPane(summaryPanel);
-        summaryScroll.setOpaque(false);
-        summaryScroll.getViewport().setOpaque(false);
+        summaryScroll.setOpaque(true);
+        summaryScroll.getViewport().setOpaque(true);
         summaryScroll.setBorder(null);
         summaryScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         summaryScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         section.add(summaryScroll, BorderLayout.CENTER);
         
-        return section;
+        outerContainer.add(section, BorderLayout.CENTER);
+        
+        roundedPanel wrapper = new roundedPanel(0);
+        wrapper.setLayout(new BorderLayout());
+        wrapper.setOpaque(true);
+        wrapper.add(outerContainer, BorderLayout.CENTER);
+        
+        return wrapper;
     }
     
-    // COPIED DIRECTLY FROM PickupPanel.java - createSummaryLabel()
     private JLabel createSummaryLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(UIManager.getFont("Label.font"));
@@ -347,10 +419,9 @@ public class ConfirmPaymentPanel extends JPanel {
     
     private JPanel createBottomButtons() {
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setOpaque(false);
+        bottomPanel.setOpaque(true);
         bottomPanel.setBorder(new EmptyBorder(10, PADDING, PADDING, PADDING));
         
-        // Left panel for Go Back button
         JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftButtonPanel.setOpaque(false);
         
@@ -360,10 +431,10 @@ public class ConfirmPaymentPanel extends JPanel {
                 ((CardLayout) parent.getLayout()).show(parent, "PICKUP");
             }
         });
+        styleButton(goBackBtn);
         
         leftButtonPanel.add(goBackBtn);
         
-        // Right panel for Confirm Payment button - aligned with summary section
         JPanel rightButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightButtonPanel.setOpaque(false);
         
@@ -373,13 +444,13 @@ public class ConfirmPaymentPanel extends JPanel {
                     "Payment confirmed! Your order has been placed successfully.",
                     "Success",
                     JOptionPane.INFORMATION_MESSAGE);
-                // Navigate to orders or dashboard
                 Container parent = getParent();
                 if (parent instanceof JPanel) {
                     ((CardLayout) parent.getLayout()).show(parent, "ORDERS");
                 }
             }
         });
+        styleButton(confirmPaymentBtn);
         
         rightButtonPanel.add(confirmPaymentBtn);
         
@@ -389,8 +460,50 @@ public class ConfirmPaymentPanel extends JPanel {
         return bottomPanel;
     }
     
+    private void styleButton(buttonCreator btn) {
+        Font fredokaBold = getFredokaBold(14f);
+        btn.setCustomFont(fredokaBold);
+        btn.enableAutoScaleToWidth(0.90f, 12f, 26f);
+        
+        Dimension ph = btn.getPreferredSize();
+        int fixedHeight = Math.max(ph.height + 20, ph.height);
+        btn.setPreferredSize(new Dimension(ph.width, fixedHeight));
+        btn.setMinimumSize(new Dimension(0, fixedHeight));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, fixedHeight));
+        
+        final Color limeHover = UIManager.getColor("Sidebar.hoverBackground") != null
+                ? UIManager.getColor("Sidebar.hoverBackground")
+                : new Color(0xDAEC73);
+        
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btn.setBackground(limeHover);
+                btn.repaint();
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                Color bgBtn = UIManager.getColor("Button.background");
+                btn.setBackground(bgBtn);
+                btn.repaint();
+            }
+        });
+        
+        SwingUtilities.invokeLater(btn::rescaleNow);
+    }
+    
+    private Font getFredokaBold(float size) {
+        String[] candidates = { "Fredoka", "Fredoka Medium", "Fredoka One" };
+        for (String name : candidates) {
+            Font f = new Font(name, Font.BOLD, Math.round(size));
+            if (!"Dialog".equalsIgnoreCase(f.getFamily())) {
+                return f.deriveFont(Font.BOLD, size);
+            }
+        }
+        return new Font("Dialog", Font.BOLD, Math.round(size));
+    }
+    
     private boolean validatePayment() {
-        // Check if payment method is selected
         if (!cashlessBtn.isSelected() && !cashOnPickupBtn.isSelected()) {
             JOptionPane.showMessageDialog(this,
                 "Please select a payment method.",
@@ -399,11 +512,27 @@ public class ConfirmPaymentPanel extends JPanel {
             return false;
         }
         
-        // If cashless, check if payment app is selected
         if (cashlessBtn.isSelected()) {
             if (paymentAppCombo.getSelectedIndex() == 0) {
                 JOptionPane.showMessageDialog(this,
                     "Please select a payment app for cashless payment.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+            
+            String phoneNumber = phoneNumberField.getText().trim();
+            if (phoneNumber.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "Please enter your phone number for cashless payment.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+            
+            if (!phoneNumber.matches("\\d{10}")) {
+                JOptionPane.showMessageDialog(this,
+                    "Please enter a valid 10-digit phone number.",
                     "Validation Error",
                     JOptionPane.WARNING_MESSAGE);
                 return false;
@@ -415,48 +544,69 @@ public class ConfirmPaymentPanel extends JPanel {
     
     private String extractTextFromHTML(String html) {
         if (html == null) return "None";
-        // Remove HTML tags
         String text = html.replaceAll("<[^>]*>", "");
-        // Decode HTML entities
         text = text.replace("&bull;", "•");
         text = text.replace("&nbsp;", " ");
         return text.trim().isEmpty() ? "None" : text.trim();
     }
     
-    // COPIED DIRECTLY FROM PickupPanel.java - updateThemeColors() for summary section
+    private Color getAccentBorderColor() {
+        return isDarkTheme() ? Color.WHITE : getLightModeBlue();
+    }
+    
+    private Color getLightModeBlue() {
+        Color c = UIManager.getColor("Component.accentColor");
+        if (c == null) c = UIManager.getColor("Actions.Blue");
+        if (c == null) c = new Color(0x2196F3);
+        return c;
+    }
+    
+    private boolean isDarkTheme() {
+        Color bg = UIManager.getColor("Panel.background");
+        if (bg == null) bg = UIManager.getColor("background");
+        if (bg == null) bg = getBackground();
+        if (bg == null) return false;
+        double luminance = (0.299 * bg.getRed()) + (0.587 * bg.getGreen()) + (0.114 * bg.getBlue());
+        return luminance < 128;
+    }
+    
+    private Color getAdaptiveForegroundColor() {
+        return isDarkTheme() ? Color.WHITE : Color.BLACK;
+    }
+    
     private void updateThemeColors() {
         if (!isInitialized) return;
         
         boolean isDark = FlatLaf.isLafDark();
+        Color foregroundColor = getAdaptiveForegroundColor();
         
-        // Title labels - ALWAYS BLACK
+        // Update title labels
         if (paymentTitleLabel != null) {
             paymentTitleLabel.setFont(fontManager.h2());
-            paymentTitleLabel.setForeground(Color.BLACK);
+            paymentTitleLabel.setForeground(foregroundColor);
         }
         if (summaryTitleLabel != null) {
             summaryTitleLabel.setFont(fontManager.h2());
-            summaryTitleLabel.setForeground(Color.BLACK);
+            summaryTitleLabel.setForeground(foregroundColor);
         }
         
-        // Non-title elements - always black
-        Color labelColor = Color.BLACK;
-        
-        if (paymentMethodLabel != null) paymentMethodLabel.setForeground(labelColor);
-        if (payViaLabel != null) payViaLabel.setForeground(labelColor);
-        if (addressTextLabel != null) addressTextLabel.setForeground(labelColor);
-        if (addressValueLabel != null) addressValueLabel.setForeground(labelColor);
+        // Update payment section labels
+        if (paymentMethodLabel != null) paymentMethodLabel.setForeground(foregroundColor);
+        if (payViaLabel != null) payViaLabel.setForeground(foregroundColor);
+        if (phoneNumberLabel != null) phoneNumberLabel.setForeground(foregroundColor);
+        if (addressTextLabel != null) addressTextLabel.setForeground(foregroundColor);
+        if (addressValueLabel != null) addressValueLabel.setForeground(foregroundColor);
         
         // Update radio buttons
-        if (cashlessBtn != null) cashlessBtn.setForeground(labelColor);
-        if (cashOnPickupBtn != null) cashOnPickupBtn.setForeground(labelColor);
+        if (cashlessBtn != null) cashlessBtn.setForeground(foregroundColor);
+        if (cashOnPickupBtn != null) cashOnPickupBtn.setForeground(foregroundColor);
         
-        // Update summary labels - COPIED FROM PickupPanel
-        if (selectedServiceLabel != null) selectedServiceLabel.setForeground(labelColor);
-        if (quantitySummaryLabel != null) quantitySummaryLabel.setForeground(labelColor);
-        if (separationSummaryLabel != null) separationSummaryLabel.setForeground(labelColor);
+        // Update summary section labels
+        if (selectedServiceLabel != null) selectedServiceLabel.setForeground(foregroundColor);
+        if (quantitySummaryLabel != null) quantitySummaryLabel.setForeground(foregroundColor);
+        if (separationSummaryLabel != null) separationSummaryLabel.setForeground(foregroundColor);
+        if (instructionsHeaderLabel != null) instructionsHeaderLabel.setForeground(foregroundColor);
         
-        // Get text field colors from UIManager for consistency
         Color textFieldBackground = UIManager.getColor("TextField.background");
         Color textFieldForeground = UIManager.getColor("TextField.foreground");
         Color borderColor = UIManager.getColor("Component.borderColor");
@@ -464,12 +614,29 @@ public class ConfirmPaymentPanel extends JPanel {
             borderColor = isDark ? new Color(70, 70, 70) : new Color(200, 200, 200);
         }
         
-        // Update combo box
         if (paymentAppCombo != null) {
             paymentAppCombo.setForeground(textFieldForeground);
         }
         
-        // Update instructions summary area - COPIED FROM PickupPanel
+        if (phonePrefix != null) {
+            phonePrefix.setBackground(textFieldBackground);
+            phonePrefix.setForeground(textFieldForeground);
+            phonePrefix.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 1, 1, 0, borderColor),
+                new EmptyBorder(5, 8, 5, 2)
+            ));
+        }
+        
+        if (phoneNumberField != null) {
+            phoneNumberField.setBackground(textFieldBackground);
+            phoneNumberField.setForeground(textFieldForeground);
+            phoneNumberField.setCaretColor(textFieldForeground);
+            phoneNumberField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 1, 1, borderColor),
+                new EmptyBorder(5, 2, 5, 8)
+            ));
+        }
+        
         if (instructionsSummaryArea != null) {
             instructionsSummaryArea.setBackground(textFieldBackground);
             instructionsSummaryArea.setForeground(textFieldForeground);
@@ -479,7 +646,43 @@ public class ConfirmPaymentPanel extends JPanel {
             ));
         }
         
+        if (addressIconLabel != null) {
+            Icon locationIcon = iconCreator.getIcon(
+                isDark ? "Icons/darkmode/addressDarkMode.svg" : "Icons/lightmode/address.svg",
+                20, 20
+            );
+            addressIconLabel.setIcon(locationIcon);
+        }
+        
+        updateSectionBorders();
+        
         repaint();
+    }
+    
+    private void updateSectionBorders() {
+        Color accent = getAccentBorderColor();
+        updatePanelBorder(paymentSection, accent);
+        updatePanelBorder(summarySection, accent);
+    }
+    
+    private void updatePanelBorder(roundedPanel panel, Color accent) {
+        if (panel == null) return;
+        Component[] comps = panel.getComponents();
+        for (Component c : comps) {
+            if (c instanceof JPanel) {
+                JPanel jp = (JPanel) c;
+                Component[] innerComps = jp.getComponents();
+                for (Component ic : innerComps) {
+                    if (ic instanceof roundedPanel) {
+                        roundedPanel rp = (roundedPanel) ic;
+                        rp.setBorder(BorderFactory.createCompoundBorder(
+                            new roundedBorder(18, accent, 2),
+                            new EmptyBorder(15, 15, 15, 15)
+                        ));
+                    }
+                }
+            }
+        }
     }
     
     @Override
@@ -489,6 +692,82 @@ public class ConfirmPaymentPanel extends JPanel {
         
         if (isInitialized) {
             updateThemeColors();
+            if (goBackBtn != null) goBackBtn.rescaleNow();
+            if (confirmPaymentBtn != null) confirmPaymentBtn.rescaleNow();
+        }
+    }
+    
+    private static class PaymentAppItem {
+        private String name;
+        private String iconPath;
+        
+        public PaymentAppItem(String name, String iconPath) {
+            this.name = name;
+            this.iconPath = iconPath;
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+        public String getIconPath() {
+            return iconPath;
+        }
+        
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+    
+    private static class PaymentAppRenderer extends JLabel implements ListCellRenderer<PaymentAppItem> {
+        
+        public PaymentAppRenderer() {
+            setOpaque(true);
+            setHorizontalAlignment(LEFT);
+            setVerticalAlignment(CENTER);
+            setBorder(new EmptyBorder(5, 8, 5, 8));
+        }
+        
+        @Override
+        public Component getListCellRendererComponent(
+                JList<? extends PaymentAppItem> list,
+                PaymentAppItem value,
+                int index,
+                boolean isSelected,
+                boolean cellHasFocus) {
+            
+            if (value == null) {
+                setText("");
+                setIcon(null);
+                return this;
+            }
+            
+            setText(value.getName());
+            
+            if (value.getIconPath() != null) {
+                try {
+                    Icon icon = iconCreator.getIcon(value.getIconPath(), 20, 20);
+                    setIcon(icon);
+                    setIconTextGap(8);
+                } catch (Exception e) {
+                    setIcon(null);
+                }
+            } else {
+                setIcon(null);
+            }
+            
+            if (isSelected) {
+                setBackground(list.getSelectionBackground());
+                setForeground(list.getSelectionForeground());
+            } else {
+                setBackground(list.getBackground());
+                setForeground(list.getForeground());
+            }
+            
+            setFont(list.getFont());
+            
+            return this;
         }
     }
 }
