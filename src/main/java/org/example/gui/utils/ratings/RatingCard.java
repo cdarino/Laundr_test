@@ -14,7 +14,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.Vector;
-// new imports
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.sql.Connection;
@@ -27,18 +26,12 @@ public class RatingCard extends roundedPanel {
     private JTextArea reviewTextArea;
     private buttonCreator saveButton;
 
-    // --- new fields ---
     private final int orderID;
     private final int laundromatID;
     private final int custID;
     private final ReviewData existingReview; // will be null if no review exists
     private final Runnable saveCallback; // action to run on successful save
 
-    /**
-     * updated constructor.
-     * it now takes all data needed to show and save a review.
-     * if existingreview is not null, it populates and disables the card.
-     */
     public RatingCard(int orderID, int laundromatID, int custID, String laundromatName, ReviewData existingReview, Runnable saveCallback) {
         super(15);
         this.orderID = orderID;
