@@ -208,7 +208,8 @@ public class ConfirmPaymentPanel extends JPanel {
             new PaymentAppItem("Maya", "Icons/apps/paymaya.svg"),
             new PaymentAppItem("PayPal", "Icons/apps/paypal.svg"),
             new PaymentAppItem("ShopeePay", "Icons/apps/shopeepay.svg"),
-            new PaymentAppItem("GrabPay", "Icons/apps/grabpay.svg")
+            new PaymentAppItem("GrabPay", "Icons/apps/grabpay.svg"),
+//            new PaymentAppItem("Digital Wallet", "Icons/lightmode/wallet.svg")
         };
         
         paymentAppCombo = new JComboBox<>(paymentApps);

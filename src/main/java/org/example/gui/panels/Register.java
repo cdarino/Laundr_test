@@ -162,6 +162,7 @@ public class Register extends JPanel {
         String address = addressField.getText().trim();
         String password = new String(passField.getPassword());
         String confirm = new String(confirmField.getPassword());
+        double walletBalance = 0.00;
 
         if (username.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Missing Information", JOptionPane.ERROR_MESSAGE);
@@ -181,7 +182,7 @@ public class Register extends JPanel {
             }
 
             CustomerDAO dao = new CustomerDAO(conn);
-            Customer newCustomer = new Customer(username, password, phone, address, email);
+            Customer newCustomer = new Customer(username, password, phone, address, email, walletBalance);
 
             boolean success = dao.registerCustomer(newCustomer);
 

@@ -94,9 +94,11 @@ public class CustomerDAO {
                         null, // do not retrieve or store the password
                         rs.getString("custPhone"),
                         rs.getString("custAddress"),
-                        rs.getString("custEmail")
+                        rs.getString("custEmail"),
+                        rs.getDouble("walletBalance")
                 );
                 customer.setCustID(rs.getInt("custID")); // set the ID as well
+                customer.setWalletBalance(rs.getDouble("walletBalance"));
                 return customer;
             }
         } catch (SQLException e) {
@@ -164,5 +166,63 @@ public class CustomerDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+     //fetches only the wallet balance for a given customer id.
+    public double getWalletBalance(int custID) throws SQLException {
+        if (connection == null) {
+            throw new SQLException("no database connection.");
+        }
+        String query = "SELECT walletBalance FROM customer WHERE custID = " + custID;
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery(query)) {
+            if (rs.next()) {
+                return rs.getDouble("walletBalance");
+            }
+        }
+        // if user not found or error, return 0
+        return 0.0;
+    }
+
+    //adds a specified amount to a user's current wallet balance.
+    public double addWalletBalance(int custID, double amountToAdd) {
+        if (connection == null) {
+            System.err.println("digitalwallet: no connection.");
+            return -1.0;
+        }
+
+        if (amountToAdd <= 0) {
+            System.err.println("digitalwallet: amount to add must be positive.");
+            return -1.0;
+        }
+
+        try {
+            // 1. get current balance
+            double currentBalance = 0.00;
+            String getQuery = "SELECT walletBalance FROM customer WHERE custID = " + custID;
+            try (Statement st = connection.createStatement();
+                 ResultSet rs = st.executeQuery(getQuery)) {
+                if (rs.next()) {
+                    currentBalance = rs.getDouble("walletBalance");
+                }
+            }
+
+            // 2. calculate new balance
+            double newBalance = currentBalance + amountToAdd;
+
+            // 3. update the database
+            String updateQuery = "UPDATE customer SET walletBalance = " + newBalance + " WHERE custID = " + custID;
+            try (Statement st = connection.createStatement()) {
+                int rowsAffected = st.executeUpdate(updateQuery);
+                if (rowsAffected > 0) {
+                    return newBalance; // return the new balance on success
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return -1.0; // indicate failure
     }
 }

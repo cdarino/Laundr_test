@@ -11,7 +11,8 @@ CREATE TABLE customer (
     custPassword VARCHAR(255) NOT NULL,
     custPhone VARCHAR(20) UNIQUE,
     custAddress VARCHAR(150),
-    custEmail VARCHAR(100) UNIQUE
+    custEmail VARCHAR(100) UNIQUE,
+    walletBalance DECIMAL(10, 2) DEFAULT 0.00 -- <-- NEW COLUMN
 ) AUTO_INCREMENT = 1001; -- Starts customer IDs at 1001
 
 -- Admin
@@ -117,11 +118,11 @@ CREATE TABLE notification (
 -- ------------------------------------------------------------------
 
 -- 1. INSERT ADMIN
-INSERT INTO admin (adminUsername, adminPassword) 
+INSERT INTO admin (adminUsername, adminPassword)
 VALUES ('laundradmin', 'laundradmin');
 
 -- 2. INSERT LAUNDROMATS (ONLY THE 5)
-INSERT INTO laundromat 
+INSERT INTO laundromat
 (laundromatName, laundromatAddress, rating, imagePath, distanceFromUser, estimatedTime, highlights)
 VALUES
 ('WashEat Laundry', '100 Wash St, Zamboanga City', 0, 'Pictures/washeat.png', '1.0 km', '1 Day', 'Open 24 Hours,Hypoallergenic Options,Stain Pre-Treat,Sanitized Machines,Bedding & Large Items,Competitive Pricing'),
@@ -133,7 +134,7 @@ VALUES
 -- 3. INSERT DUMMY CUSTOMERS FOR REVIEWS
 -- (Customers 1001-1025)
 INSERT INTO customer (custUsername, custPassword, custPhone, custAddress, custEmail)
-VALUES 
+VALUES
 ('maria_s', 'pass', '09000000001', 'N/A', 'maria@email.com'),
 ('kevin_l', 'pass', '09000000002', 'N/A', 'kevin@email.com'),
 ('priya_n', 'pass', '09000000003', 'N/A', 'priya@email.com'),
@@ -163,7 +164,7 @@ VALUES
 -- 4. INSERT DUMMY ORDERS FOR REVIEWS
 -- (Orders 2001-2025)
 INSERT INTO orders (custID, laundromatID, orderStatus, totalAmount)
-VALUES 
+VALUES
 -- WashEat (Laundromat 1, Customers 1001-1005)
 (1001, 1, 'completed', 150.00), (1001, 1, 'completed', 150.00), (1001, 1, 'in_progress', 150.00), (1002, 1, 'completed', 200.00), (1003, 1, 'completed', 100.00), (1004, 1, 'completed', 50.00), (1005, 1, 'completed', 300.00),
 -- La Vahh (Laundromat 2, Customers 1006-1010)
