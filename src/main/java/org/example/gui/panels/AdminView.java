@@ -39,7 +39,6 @@ public class AdminView extends JPanel {
         add(header, BorderLayout.NORTH);
 
         // 2. Initialize the AdminDAO
-        // --- FIX: DO NOT use try-with-resources here ---
         try {
             Connection conn = DBConnect.getConnection();
             if (conn != null && !conn.isClosed()) {
@@ -53,7 +52,6 @@ public class AdminView extends JPanel {
             add(new JLabel("Error: " + e.getMessage()), BorderLayout.CENTER);
             return;
         }
-        // --- End of FIX ---
 
         // 3. Create the JTabbedPane
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -107,9 +105,6 @@ public class AdminView extends JPanel {
         return panel;
     }
 
-    /**
-     * Creates the Laundromat Management tab.
-     */
     private JPanel createLaundromatPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -119,7 +114,6 @@ public class AdminView extends JPanel {
         laundromatsTable = new JTable(laundromatsTableModel);
         laundromatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // --- NEW: Add selection listener to populate form ---
         laundromatsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int selectedRow = laundromatsTable.getSelectedRow();

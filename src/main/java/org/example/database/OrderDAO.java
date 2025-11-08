@@ -6,10 +6,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Vector;
 
-/**
- * Data Access Object for Order-related queries.
- * UPDATED with console print statements for debugging.
- */
 public class OrderDAO {
 
     private Connection connection;
@@ -18,11 +14,6 @@ public class OrderDAO {
         this.connection = connection;
     }
 
-    /**
-     * Gets the 3 most recent orders for a specific customer.
-     * Joins with the laundromat table to get the name.
-     * (Used by Dashboard)
-     */
     public Vector<Vector<Object>> getRecentOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();
         if (connection == null) {
@@ -36,10 +27,6 @@ public class OrderDAO {
                 "WHERE o.custID = " + custID + " " +
                 "ORDER BY o.orderDate DESC " +
                 "LIMIT 3";
-
-        // --- DEBUG PRINT ---
-        System.out.println("[OrderDAO.getRecentOrders] Executing query: " + query);
-        // ---
 
         try (Statement st = connection.createStatement();
              ResultSet rs = st.executeQuery(query)) {

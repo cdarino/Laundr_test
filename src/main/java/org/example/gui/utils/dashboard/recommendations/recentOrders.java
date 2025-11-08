@@ -14,26 +14,18 @@ import java.awt.*;
 import java.sql.Connection;
 import java.util.Vector;
 
-/**
- * This panel is now dynamic. It loads the 3 most recent orders
- * for the currently logged-in user.
- *
- * UPDATED: Added an explicit revalidate/repaint call
- * after loading data to fix the initial load bug.
- */
 public class recentOrders extends roundedPanel {
     private roundedPanel headingPanel;
     private JTable table;
-    private DefaultTableModel tableModel; // Made this a field
+    private DefaultTableModel tableModel;
     private final Mainframe frame;
     private OrderDAO orderDAO;
     private CustomerDAO customerDAO;
 
     public recentOrders(Mainframe frame) {
-        super(16); // Main panel rounded corners
+        super(16);
         this.frame = frame;
 
-        // Refactored: Moved logic into helper methods
         initializeDAOs();
         initComponents();
     }
@@ -47,23 +39,12 @@ public class recentOrders extends roundedPanel {
             if (conn != null && !conn.isClosed()) {
                 this.orderDAO = new OrderDAO(conn);
                 this.customerDAO = new CustomerDAO(conn);
-                // --- DEBUG PRINT ---
-                System.out.println("recentOrders: DAOs initialized successfully.");
-                // ---
-            } else {
-                // --- DEBUG PRINT ---
-                System.err.println("recentOrders: DB Connection is null or closed.");
-                // ---
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * Initializes and lays out all the UI components for this panel.
-     * (All UI/color code from the original constructor is here).
-     */
     private void initComponents() {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(UIManager.getColor("Menu.background"));
@@ -137,19 +118,12 @@ public class recentOrders extends roundedPanel {
         // 1. Get current username from Mainframe
         String username = frame.getCurrentUser();
         if (username == null) {
-            // --- DEBUG PRINT ---
-            System.out.println("recentOrders: No user logged in. Clearing table.");
-            // ---
             tableModel.setRowCount(0); // Clear table if no user is logged in
             return;
         }
 
-        // --- DEBUG PRINT ---
-        System.out.println("recentOrders: Loading orders for user: " + username);
-        // ---
 
         try {
-            // 2. Get customer ID from username
             int custID = customerDAO.getCustomerId(username);
             if (custID == -1) {
                 System.err.println("recentOrders: Could not find customer ID for: " + username);
@@ -157,19 +131,10 @@ public class recentOrders extends roundedPanel {
                 return;
             }
 
-            // --- DEBUG PRINT ---
-            System.out.println("recentOrders: Found custID: " + custID);
-            // ---
-
             // 3. Fetch recent orders from OrderDAO
             Vector<Vector<Object>> data = orderDAO.getRecentOrders(custID);
 
-            // 4. Populate table
-            tableModel.setRowCount(0); // Clear old data
-
-            // --- DEBUG PRINT ---
-            System.out.println("recentOrders: Found " + data.size() + " recent orders.");
-            // ---
+            tableModel.setRowCount(0);
 
             if (data.isEmpty()) {
                 // Optionally show a message
@@ -180,21 +145,15 @@ public class recentOrders extends roundedPanel {
                 }
             }
 
-            // --- THE FIX ---
-            // Force the table and its scroll pane to re-layout and repaint.
-            // This ensures the UI updates *immediately* after the
-            // data is added, fixing the "only works on second click" bug.
             if (table != null) {
                 table.revalidate();
                 table.repaint();
-                // Also repaint the scroll pane's viewport
                 Component parent = table.getParent();
                 if (parent instanceof JViewport) {
                     parent.revalidate();
                     parent.repaint();
                 }
             }
-            // --- END FIX ---
 
         } catch (Exception e) {
             e.printStackTrace();
