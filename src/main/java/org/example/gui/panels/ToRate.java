@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-// new imports
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
 import org.example.database.OrderDAO;
@@ -14,7 +13,6 @@ import org.example.gui.Mainframe;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Vector;
-// ---
 
 import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.ratings.RatingCard;
@@ -34,7 +32,6 @@ public class ToRate extends JPanel {
     private int currentCustID = -1;
     // ---
 
-    // --- UPDATED CONSTRUCTOR ---
     public ToRate(Mainframe frame, Landing landing) { // accept mainframe
         this.frame = frame; // store mainframe
         this.landing = landing;

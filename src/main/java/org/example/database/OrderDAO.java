@@ -10,10 +10,6 @@ import java.util.Vector;
 /**
  * Data Access Object for Order-related queries.
  *
- * all queries use string concatenation as requested.
- *
- * updated:
- * - added getallcompletedorders for the torate panel.
  */
 public class OrderDAO {
 
@@ -26,8 +22,6 @@ public class OrderDAO {
     /**
      * Fetches the 3 most recent orders for the dashboard's recentOrders panel.
      *
-     * @param custID The ID of the customer.
-     * @return A Vector of Vectors, where each inner Vector is a row: [OrderID, LaundromatName, Status]
      */
     public Vector<Vector<Object>> getRecentOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();
@@ -45,10 +39,6 @@ public class OrderDAO {
                 "ORDER BY o.orderDate DESC " +
                 "LIMIT 3";
 
-        // --- debug print ---
-        System.out.println("[OrderDAO.getRecentOrders] Executing query: " + query);
-        // ---
-
         try (Statement st = connection.createStatement();
              ResultSet rs = st.executeQuery(query)) {
 
@@ -60,13 +50,7 @@ public class OrderDAO {
                 row.add(rs.getString("orderStatus"));
                 data.add(row);
                 rowsFound++;
-                // --- debug print ---
-                System.out.println("   -> Found row: " + row);
-                // ---
             }
-            // --- debug print ---
-            System.out.println("[OrderDAO.getRecentOrders] Total rows found: " + rowsFound);
-            // ---
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -76,11 +60,6 @@ public class OrderDAO {
     /**
      * A dynamic method to fetch orders based on a list of statuses.
      * Used by both the "Orders" panel and the "To Receive" panel.
-     *
-     * @param custID    The customer's ID.
-     * @param statuses  A List of statuses to include (e.g., ["pending", "in_progress"]).
-     * @param sortOrder The SQL sort order ("ASC" for ascending, "DESC" for descending).
-     * @return A Vector of Vectors, where each inner Vector is a row: [OrderID, LaundromatName, Address, TotalAmount, OrderDate]
      */
     public Vector<Vector<Object>> getDynamicOrders(int custID, List<String> statuses, String sortOrder) {
         Vector<Vector<Object>> data = new Vector<>();
@@ -128,9 +107,6 @@ public class OrderDAO {
     /**
      * Fetches *all* completed orders for a user.
      * Used by the "ToRate" panel.
-     *
-     * @param custID The customer's ID.
-     * @return A Vector of Vectors, where each inner Vector is a row: [OrderID, LaundromatID, LaundromatName]
      */
     public Vector<Vector<Object>> getAllCompletedOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();

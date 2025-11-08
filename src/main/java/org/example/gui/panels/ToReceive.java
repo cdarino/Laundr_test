@@ -20,18 +20,15 @@ import org.example.gui.utils.orders.toReceiveCard;
 
 public class ToReceive extends JPanel {
     private JLabel titleLabel;
-    private JLabel backLabel; // <-- CHANGED: Made backLabel a class field
+    private JLabel backLabel;
     private JPanel containerPanel;
     private Landing landing;
 
-    // --- new fields for db connection ---
     private Mainframe frame;
     private OrderDAO orderDAO;
     private CustomerDAO customerDAO;
     private int currentCustID = -1;
-    // ---
 
-    // --- UPDATED CONSTRUCTOR ---
     public ToReceive(Mainframe frame, Landing landing) {
         this.frame = frame;
         this.landing = landing;
@@ -46,14 +43,12 @@ public class ToReceive extends JPanel {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        // ---
 
-        // Call initComponents to set up the UI
         initComponents();
     }
 
     private void initComponents() {
-        // Clear all components before rebuilding (good for updateUI)
+        // Clear all components before rebuilding
         removeAll();
 
         setLayout(new BorderLayout());
@@ -111,10 +106,6 @@ public class ToReceive extends JPanel {
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
 
-        // --- remove all hardcoded data ---
-        // (they are now in loadToReceiveData)
-
-        // layout update
         revalidate();
         repaint();
     }

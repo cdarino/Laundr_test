@@ -70,7 +70,6 @@ public class AdminDAO {
         if (connection == null) {
             throw new SQLException("Cannot fetch laundromats — no database connection.");
         }
-        // UPDATED: Query now selects the new UI-focused columns
         String query = "SELECT laundromatID, laundromatName, laundromatAddress, rating, " +
                 "imagePath, distanceFromUser, estimatedTime, highlights FROM laundromat";
 
