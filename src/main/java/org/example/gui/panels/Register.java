@@ -163,54 +163,49 @@ public class Register extends JPanel {
         String password = new String(passField.getPassword());
         String confirm = new String(confirmField.getPassword());
 
-        if (!isValidUsername(username)) {
-            JOptionPane.showMessageDialog(this,
-                    "Username must be at least 6 characters long and contain only letters, digits, underscores (_), or dashes (-).",
-                    "Invalid Username",
-                    JOptionPane.ERROR_MESSAGE);
+        if (username.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Missing Information", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         if (!password.equals(confirm)) {
-            JOptionPane.showMessageDialog(this,
-                    "Passwords do not match!",
-                    "Password Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Passwords do not match.", "Password Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        if (address.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Please enter your address.",
-                    "Missing Address",
-                    JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        try (Connection conn = DBConnect.getConnection()) {
-            if (conn == null) {
-                JOptionPane.showMessageDialog(this, "Database connection failed.", "Error", JOptionPane.ERROR_MESSAGE);
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn == null || conn.isClosed()) {
+                JOptionPane.showMessageDialog(this, "Failed to connect to database.", "Database Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             CustomerDAO dao = new CustomerDAO(conn);
-            Customer customer = new Customer(username, password, phone, address, email);
+            Customer newCustomer = new Customer(username, password, phone, address, email);
 
-            boolean success = dao.registerCustomer(customer);
+            boolean success = dao.registerCustomer(newCustomer);
+
             if (success) {
-                JOptionPane.showMessageDialog(this, "Registration successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Registration successful! Please login.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 frame.showCard("LOGIN");
+                clearFields();
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Username or email already exists.",
-                        "Registration Error",
-                        JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Username, email, or phone may already exist.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
             }
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Exception", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Database error: " + e.getMessage(), "Exception", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void clearFields() {
+        userField.setText("");
+        emailField.setText("");
+        phoneField.setText("");
+        addressField.setText("");
+        passField.setText("");
+        confirmField.setText("");
     }
 
     private boolean isValidUsername(String username) {

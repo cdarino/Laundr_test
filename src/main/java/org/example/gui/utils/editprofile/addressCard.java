@@ -74,22 +74,6 @@ public class addressCard extends JPanel {
         tfAddress1.setMaximumSize(new Dimension(txtFieldWidth, txtFieldHeight));
         formPanel.add(tfAddress1, gbc);
 
-        // Shipping Address 2
-        gbc.gridy++;
-        gbc.gridx = 0;
-        gbc.weightx = 0;
-        JLabel lblAddress2 = new JLabel("Shipping Address 2:");
-        fontManager.applyHeading(lblAddress2, 8);
-        lblAddress2.setPreferredSize(new Dimension(labelWidth, 28));
-        formPanel.add(lblAddress2, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        JTextField tfAddress2 = new JTextField("Unit 4, Building X");
-        tfAddress2.setPreferredSize(new Dimension(txtFieldWidth, txtFieldHeight));
-        tfAddress2.setMaximumSize(new Dimension(txtFieldWidth, txtFieldHeight));
-        formPanel.add(tfAddress2, gbc);
-
         // push button row down a bit
         gbc.gridy++;
         gbc.gridx = 0;
