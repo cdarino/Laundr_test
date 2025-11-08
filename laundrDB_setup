@@ -59,8 +59,7 @@ CREATE TABLE orders (
         'in_progress',
         'ready_for_delivery',
         'out_for_delivery',
-        'completed',
-        'cancelled'
+        'completed'
     ) DEFAULT 'pending',
     totalAmount DECIMAL(10,2),
     FOREIGN KEY (custID) REFERENCES customer(custID),
