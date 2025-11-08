@@ -165,7 +165,7 @@ VALUES
 INSERT INTO orders (custID, laundromatID, orderStatus, totalAmount)
 VALUES 
 -- WashEat (Laundromat 1, Customers 1001-1005)
-(1001, 1, 'completed', 150.00), (1002, 1, 'completed', 200.00), (1003, 1, 'completed', 100.00), (1004, 1, 'completed', 50.00), (1005, 1, 'completed', 300.00),
+(1001, 1, 'completed', 150.00), (1001, 1, 'completed', 150.00), (1001, 1, 'in_progress', 150.00), (1002, 1, 'completed', 200.00), (1003, 1, 'completed', 100.00), (1004, 1, 'completed', 50.00), (1005, 1, 'completed', 300.00),
 -- La Vahh (Laundromat 2, Customers 1006-1010)
 (1006, 2, 'completed', 150.00), (1007, 2, 'completed', 200.00), (1008, 2, 'completed', 100.00), (1009, 2, 'completed', 50.00), (1010, 2, 'completed', 300.00),
 -- Allklean (Laundromat 3, Customers 1011-1015)
@@ -193,7 +193,6 @@ VALUES
 -- WashEat Laundry (Laundromat 1)
 INSERT INTO review (orderID, laundromatID, custID, rating, comment) VALUES
 (2001, 1, 1001, 5, 'Dropped off at midnight and still got a next-day turnaround. Clothes were neatly folded and smelled fresh.'),
-(2002, 1, 1002, 4, 'Was worried about a coffee stain, but it’s gone. Pricing feels fair for 24/7 convenience.'),
 (2003, 1, 1003, 5, 'Hypoallergenic option really helped. No irritation at all, and towels are super soft.'),
 (2004, 1, 1004, 4, 'Machines looked sanitized and the staff was responsive on pickup time.'),
 (2005, 1, 1005, 5, 'Comforters came back fluffy and sealed. Very happy with the packaging.');
