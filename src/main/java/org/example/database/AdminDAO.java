@@ -169,7 +169,6 @@ public class AdminDAO {
         estTime = estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
         highlights = highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
 
-        // UPDATED: Query now updates the new UI-focused columns
         String query = "UPDATE laundromat SET " +
                 "laundromatName = " + name + ", " +
                 "laundromatAddress = " + address + ", " +

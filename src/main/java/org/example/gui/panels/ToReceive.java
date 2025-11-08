@@ -48,11 +48,10 @@ public class ToReceive extends JPanel {
     }
 
     private void initComponents() {
-        // Clear all components before rebuilding
         removeAll();
 
         setLayout(new BorderLayout());
-        setOpaque(false); // make panel transparent
+        setOpaque(false);
 
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
@@ -110,7 +109,7 @@ public class ToReceive extends JPanel {
         repaint();
     }
 
-    // --- new method to load data ---
+    // load order data
     private void loadToReceiveData() {
         if (orderDAO == null || customerDAO == null) {
             System.err.println("toreceivepanel: daos not initialized.");
@@ -141,13 +140,12 @@ public class ToReceive extends JPanel {
                 containerPanel.add(new JLabel("You have no orders to receive."));
             } else {
                 for (Vector<Object> row : ongoingData) {
-                    // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate
                     addToReceiveCard(
                             "#" + row.get(0).toString(),
                             (String) row.get(1), // laundromatname
                             (String) row.get(2), // laundromataddress
                             "₱" + row.get(3).toString(),
-                            row.get(4).toString() // date (for the 'eta' slot)
+                            row.get(4).toString()
                     );
                 }
             }
@@ -161,7 +159,7 @@ public class ToReceive extends JPanel {
         }
     }
 
-    // --- new method to refresh data when panel is shown ---
+    // efresh data
     @Override
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
@@ -174,7 +172,7 @@ public class ToReceive extends JPanel {
         }
     }
 
-    // updated addtoreceivecard to use your original card constructor
+    // updated addtoreceivecard to use original card constructor
     public void addToReceiveCard(String id, String shop, String address, String price, String eta) {
         toReceiveCard card = new toReceiveCard(id, shop, address, price, eta);
         containerPanel.add(card);
