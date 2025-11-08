@@ -46,7 +46,6 @@ public class ToRate extends JPanel {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        // ---
 
         initComponents();
     }
