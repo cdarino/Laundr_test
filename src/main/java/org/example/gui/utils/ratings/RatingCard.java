@@ -1,5 +1,10 @@
 package org.example.gui.utils.ratings;
 
+// new imports
+import org.example.database.DBConnect;
+import org.example.database.ReviewDAO;
+import org.example.models.ReviewData; // --- fix: use new models package ---
+//
 import org.example.gui.utils.creators.roundedPanel;
 import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.fonts.fontManager;
@@ -9,6 +14,10 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.Vector;
+// new imports
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.sql.Connection;
 
 public class RatingCard extends roundedPanel {
 
@@ -18,8 +27,26 @@ public class RatingCard extends roundedPanel {
     private JTextArea reviewTextArea;
     private buttonCreator saveButton;
 
-    public RatingCard(String laundromatName, String orderId) {
+    // --- new fields ---
+    private final int orderID;
+    private final int laundromatID;
+    private final int custID;
+    private final ReviewData existingReview; // will be null if no review exists
+    private final Runnable saveCallback; // action to run on successful save
+
+    /**
+     * updated constructor.
+     * it now takes all data needed to show and save a review.
+     * if existingreview is not null, it populates and disables the card.
+     */
+    public RatingCard(int orderID, int laundromatID, int custID, String laundromatName, ReviewData existingReview, Runnable saveCallback) {
         super(15);
+        this.orderID = orderID;
+        this.laundromatID = laundromatID;
+        this.custID = custID;
+        this.existingReview = existingReview;
+        this.saveCallback = saveCallback;
+
         setBackground(UIManager.getColor("Profile.background"));
 
         Color borderColor = UIManager.getColor("listBorder");
@@ -35,118 +62,164 @@ public class RatingCard extends roundedPanel {
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.anchor = GridBagConstraints.NORTHWEST; // anchor all components to top-left
 
-        // column container (name, id, and rating)
-        JPanel leftContentPanel = new JPanel();
-        leftContentPanel.setLayout(new BoxLayout(leftContentPanel, BoxLayout.Y_AXIS));
-        leftContentPanel.setOpaque(false);
-
-        // laundromat name
-        laundromatNameLabel = new JLabel(laundromatName);
-        fontManager.applyHeading(laundromatNameLabel, 9);
-        laundromatNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        leftContentPanel.add(laundromatNameLabel);
-        leftContentPanel.add(Box.createVerticalStrut(5));
-
-        // order id
-        orderIdLabel = new JLabel("Order " + orderId);
-        fontManager.applyHeading(orderIdLabel, 13);
-        orderIdLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        leftContentPanel.add(orderIdLabel);
-        leftContentPanel.add(Box.createVerticalStrut(10));
-
-        // rating combobox
-        Vector<Integer> ratings = new Vector<>();
-        ratings.add(null); // explicit null added here to allow no default selection
-        for (int i = 5; i >= 1; i--) {
-            ratings.add(i);
-        }
-        ratingComboBox = new JComboBox<>(ratings);
-        ratingComboBox.setFont(fontManager.h8());
-        ratingComboBox.setFocusable(false); // remove focus border
-        ratingComboBox.setAlignmentX(Component.LEFT_ALIGNMENT);
-        leftContentPanel.add(ratingComboBox);
-
-        gbc.gridx = 0;
+        // --- row 0: name and rating ---
         gbc.gridy = 0;
-        gbc.gridheight = 1;
-        gbc.weightx = 0; // don't allow it to grow horizontally
-        gbc.weighty = 1.0; // push content down
-        gbc.fill = GridBagConstraints.VERTICAL;
-        add(leftContentPanel, gbc);
+        gbc.gridx = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.weightx = 1.0;
+        laundromatNameLabel = new JLabel(laundromatName);
+        add(laundromatNameLabel, gbc);
 
-        // review text area
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.weightx = 0;
+        // create a vector with 1, 2, 3, 4, 5 and a "select" prompt
+        Vector<Integer> ratings = new Vector<>();
+        ratings.add(null); // placeholder for "select"
+        for (int i = 5; i >= 1; i--) ratings.add(i);
+
+        ratingComboBox = new JComboBox<>(ratings);
+        ratingComboBox.setRenderer(new RatingRenderer()); // custom renderer for "select"
+        ratingComboBox.setSelectedIndex(0); // default to "select"
+        add(ratingComboBox, gbc);
+
+        // --- row 1: order id ---
+        gbc.gridy = 1;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.WEST;
+        orderIdLabel = new JLabel("Order #" + orderID);
+        add(orderIdLabel, gbc);
+
+        // --- row 2: text area ---
+        gbc.gridy = 2;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
         reviewTextArea = new JTextArea("Write your review...");
-        reviewTextArea.setFont(fontManager.h8());
         reviewTextArea.setLineWrap(true);
         reviewTextArea.setWrapStyleWord(true);
-        reviewTextArea.setBorder(new LineBorder(Color.LIGHT_GRAY, 1));
-
-        reviewTextArea.setOpaque(false);
-        reviewTextArea.setBackground(new Color(0, 0, 0, 0));
-
-        // wrap the jtextarea in a jscrollpane
-        JScrollPane reviewScrollPane = new JScrollPane(reviewTextArea);
-        reviewScrollPane.setBorder(BorderFactory.createEmptyBorder()); // remove default scroll pane border
-        reviewScrollPane.setPreferredSize(new Dimension(300, 100)); // preferred size
-        reviewScrollPane.setMinimumSize(new Dimension(200, 80)); // minimum size
-        reviewScrollPane.getVerticalScrollBar().setUnitIncrement(10); // smooth scrolling
-
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.gridheight = 1;
-        gbc.weightx = 1.0; // allow it to take all available horizontal space
-        gbc.weighty = 1.0; // allow it to take all available vertical space
-        gbc.fill = GridBagConstraints.BOTH; // fill both horizontal and vertical space
-        gbc.insets = new Insets(5, 30, 5, 5);
-        add(reviewScrollPane, gbc);
-
-        // save btn
-        saveButton = new buttonCreator("Save", "Button.font", () -> {
-            // add save logic here
-            System.out.println("review saved: " + getReviewText() + " with rating: " + getSelectedRating());
-        });
-
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.gridheight = 1;
-        gbc.weightx = 0; // don't push the button wide
-        gbc.weighty = 0; // don't push the button vertically
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.SOUTHEAST; // anchor to bottom right
-        gbc.insets = new Insets(10, 30, 0, 5); // <--- changed: top inset is now 10px
-        add(saveButton, gbc);
-
-        reviewTextArea.addFocusListener(new java.awt.event.FocusAdapter() {
+        // add placeholder text functionality
+        reviewTextArea.addFocusListener(new FocusAdapter() {
             @Override
-            public void focusGained(java.awt.event.FocusEvent e) {
+            public void focusGained(FocusEvent e) {
                 if (reviewTextArea.getText().equals("Write your review...")) {
                     reviewTextArea.setText("");
                     reviewTextArea.setForeground(UIManager.getColor("TextArea.foreground"));
                 }
             }
-
             @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
-                if (reviewTextArea.getText().trim().isEmpty()) {
-                    reviewTextArea.setText("Write your review...");
+            public void focusLost(FocusEvent e) {
+                if (reviewTextArea.getText().isEmpty()) {
                     reviewTextArea.setForeground(Color.GRAY);
+                    reviewTextArea.setText("Write your review...");
                 }
             }
         });
-        reviewTextArea.setForeground(Color.GRAY); // initial gray text
+        add(new JScrollPane(reviewTextArea), gbc);
 
-        updateUI(); // apply initial ui settings
+        // --- row 3: save button ---
+        gbc.gridy = 3;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.EAST;
+        saveButton = new buttonCreator("Save", "Button.font", this::handleSaveReview);
+        add(saveButton, gbc);
+
+        // --- check if review already exists ---
+        if (existingReview != null) {
+            populateExistingReview();
+        }
+
+        updateUI(); // apply fonts and colors
+    }
+
+    // --- new method to handle saving ---
+    private void handleSaveReview() {
+        Integer rating = getSelectedRating();
+        String comment = getReviewText();
+
+        if (rating == null) {
+            JOptionPane.showMessageDialog(this, "Please select a rating (1-5).", "Rating Required", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn == null || conn.isClosed()) {
+                JOptionPane.showMessageDialog(this, "Database connection lost.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            ReviewDAO reviewDAO = new ReviewDAO(conn);
+            boolean success = reviewDAO.addReviewAndUpdateAverage(orderID, laundromatID, custID, rating, comment);
+
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Review saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // disable card and run callback
+                setCardEnabled(false);
+                if (saveCallback != null) {
+                    saveCallback.run(); // this will tell torate panel to refresh
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save review.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error saving review: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // --- new method to disable card ---
+    private void setCardEnabled(boolean enabled) {
+        ratingComboBox.setEnabled(enabled);
+        reviewTextArea.setEnabled(enabled);
+        saveButton.setEnabled(enabled);
+
+        if (!enabled) {
+            reviewTextArea.setEditable(false);
+            Color disabledColor = UIManager.getColor("Label.disabledForeground");
+            reviewTextArea.setForeground(disabledColor);
+
+            // disable the buttonCreator
+            saveButton.setEnabled(false);
+            saveButton.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        }
+    }
+
+    // --- new method to populate existing data ---
+    private void populateExistingReview() {
+        ratingComboBox.setSelectedItem(existingReview.getRating());
+        reviewTextArea.setText(existingReview.getComment());
+        reviewTextArea.setForeground(UIManager.getColor("TextArea.foreground"));
+
+        // disable everything
+        setCardEnabled(false);
+    }
+
+    // custom renderer for the jcombobox
+    class RatingRenderer extends DefaultListCellRenderer {
+        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value == null) {
+                setText("Select Rating");
+            } else {
+                setText(value.toString());
+            }
+            return this;
+        }
     }
 
     @Override
     public void updateUI() {
         super.updateUI();
+        // apply fonts and colors when theme changes
         SwingUtilities.invokeLater(() -> {
-            // re-apply fonts and colors when theme changes
             if (laundromatNameLabel != null) {
-                fontManager.applyHeading(laundromatNameLabel, 9); // changed back to 9 based on initial request
+                fontManager.applyHeading(laundromatNameLabel, 9);
                 fontManager.applyHeading(orderIdLabel, 13);
                 ratingComboBox.setFont(fontManager.h8());
                 reviewTextArea.setFont(fontManager.h8());
@@ -154,12 +227,19 @@ public class RatingCard extends roundedPanel {
                 if (reviewTextArea.getText().equals("Write your review...")) {
                     reviewTextArea.setForeground(Color.GRAY);
                 } else {
-                    reviewTextArea.setForeground(UIManager.getColor("TextArea.foreground"));
+                    // only set foreground if not disabled
+                    if (reviewTextArea.isEnabled()) {
+                        reviewTextArea.setForeground(UIManager.getColor("TextArea.foreground"));
+                    }
                 }
             }
 
             if (saveButton != null) {
                 saveButton.updateUI();
+                // re-apply disabled state if necessary
+                if (existingReview != null) {
+                    setCardEnabled(false);
+                }
             }
 
             Color borderColor = UIManager.getColor("listBorder");
@@ -174,7 +254,6 @@ public class RatingCard extends roundedPanel {
         });
     }
 
-    // add getters for reviewtext and selectedrating
     public Integer getSelectedRating() {
         Object selected = ratingComboBox.getSelectedItem();
         return (selected instanceof Integer) ? (Integer) selected : null;

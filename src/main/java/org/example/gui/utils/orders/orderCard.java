@@ -1,16 +1,20 @@
 package org.example.gui.utils.orders;
 
-import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.fonts.fontManager;
 
 import javax.swing.*;
 import java.awt.*;
+// new import
+import java.text.DecimalFormat;
 
 public class orderCard extends JPanel {
 
-    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, etaLabel;
+    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, dateLabel;
 
-    public orderCard(String orderId, String weight, String laundromat,
+    // formatter for currency
+    private static final DecimalFormat df = new DecimalFormat("₱#,##0.00");
+
+    public orderCard(String orderId, String laundromat,
                      String address, String price, String date) {
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
@@ -28,54 +32,46 @@ public class orderCard extends JPanel {
         leftPanel.setOpaque(false);
         leftPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        orderInfo = new JLabel("Order " + orderId + " | " + weight);
+        orderInfo = new JLabel("Order " + orderId);
         laundromatLabel = new JLabel(laundromat);
-        services = new JLabel("<html><ul style='margin:0;padding-left:15;'>"
-                + "<li>Wash and Fold</li>"
-                + "<li>Dry Clean</li>"
-                + "</ul></html>");
+        services = new JLabel("<html><ul style='margin:0;padding:0;list-style-type:none;'>" +
+                "<li>Completed</li>" + // status for a completed card
+                "</ul></html>");
+        // ---
 
-        fontManager.applyHeading(orderInfo,7);
+        fontManager.applyHeading(orderInfo, 7);
         fontManager.applyHeading(laundromatLabel, 7);
-        fontManager.applyHeading(services, 8);
-
-        // align all labels to left
-        orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        services.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         leftPanel.add(orderInfo);
-        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(laundromatLabel);
-        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
-        // middle
+        // --- Middle Panel ---
         JPanel middlePanel = new JPanel();
         middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
         middlePanel.setOpaque(false);
-        middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60)); // adjust spacing between columns
-        middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        middlePanel.setAlignmentY(Component.TOP_ALIGNMENT); // align content top
 
+        // --- ui kept identical ---
         addressLabel = new JLabel("<html>" + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        etaLabel = new JLabel("<html>" + date + "</html>");
+        dateLabel = new JLabel("<html>" + date + "</html>"); // use orderdate
+        // ---
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
-        fontManager.applyHeading(etaLabel, 8);
+        fontManager.applyHeading(dateLabel, 8);
 
         // align labels to the left
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        etaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         middlePanel.add(Box.createVerticalStrut(5));
         middlePanel.add(addressLabel);
         middlePanel.add(Box.createVerticalStrut(10));
         middlePanel.add(paymentLabel);
         middlePanel.add(Box.createVerticalStrut(10));
-        middlePanel.add(etaLabel);
+        middlePanel.add(dateLabel);
 
         add(leftPanel);
         add(middlePanel);
@@ -92,11 +88,8 @@ public class orderCard extends JPanel {
                 fontManager.applyHeading(services, 8);
                 fontManager.applyHeading(addressLabel, 8);
                 fontManager.applyHeading(paymentLabel, 8);
-                fontManager.applyHeading(etaLabel, 8);
+                fontManager.applyHeading(dateLabel, 8);
             }
-
-            revalidate();
-            repaint();
         });
     }
 }

@@ -100,7 +100,6 @@ public class availableLaundromats extends roundedPanel {
 
         setBackground(UIManager.getColor("Menu.background"));
         setBorder(new roundedBorder(16, UIManager.getColor("listBorder"), 2));
-        // ---
 
         if (list != null) {
             list.setBackground(UIManager.getColor("background"));

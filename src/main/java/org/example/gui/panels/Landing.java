@@ -31,10 +31,10 @@ public class Landing extends JPanel {
         centerPanel.add(new Laundromats(), "LAUNDROMATS");
         centerPanel.add(new EditProfile(frame, this), "EDIT");
         centerPanel.add(new DigitalWallet(frame, this), "WALLET");
-        centerPanel.add(new ToReceive(this), "RECEIVE");
-        centerPanel.add(new ToRate(this), "RATE");
+        centerPanel.add(new ToReceive(frame, this), "RECEIVE");
+        centerPanel.add(new ToRate(frame, this), "RATE");
         centerPanel.add(new PickupPanel(), "PICKUP");
-        centerPanel.add(new Orders(), "ORDERS");
+        centerPanel.add(new Orders(frame), "ORDERS");
 
         add(centerPanel, BorderLayout.CENTER);
 

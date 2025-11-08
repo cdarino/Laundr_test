@@ -7,10 +7,6 @@ import java.util.Vector;
  * DAO for Admin operations.
  * Manages Admin Login, Customer/Order viewing, and Laundromat C.R.U.D.
  *
- * UPDATED:
- * - getAllLaundromats() now fetches new UI columns (distance, time, highlights, imagePath).
- * - addLaundromat() now inserts new UI columns.
- * - NEW: updateLaundromat() method added.
  */
 public class AdminDAO {
 
@@ -69,7 +65,6 @@ public class AdminDAO {
 
     /**
      * Fetches all laundromats. Used by AdminView.java.
-     * UPDATED to match new table structure.
      */
     public Vector<Vector<Object>> getAllLaundromats() throws SQLException {
         if (connection == null) {
@@ -131,7 +126,6 @@ public class AdminDAO {
 
     /**
      * Adds a new laundromat to the database. Used by AdminView.java.
-     * UPDATED to match new table structure.
      */
     public boolean addLaundromat(String name, String address, String imagePath, String distance, String estTime, String highlights) throws SQLException {
         if (connection == null) {
@@ -146,8 +140,6 @@ public class AdminDAO {
         estTime = estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
         highlights = highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
 
-
-        // UPDATED: Query now inserts the new UI-focused columns
         String query = "INSERT INTO laundromat (laundromatName, laundromatAddress, imagePath, distanceFromUser, estimatedTime, highlights) VALUES ("
                 + name + ", "
                 + address + ", "
@@ -156,7 +148,6 @@ public class AdminDAO {
                 + estTime + ", "
                 + highlights + ")";
 
-        // Use try-with-resources to ensure Statement is closed
         try (Statement st = connection.createStatement()) {
             int rowsAffected = st.executeUpdate(query);
             return rowsAffected > 0;
@@ -164,7 +155,6 @@ public class AdminDAO {
     }
 
     /**
-     * --- NEW METHOD ---
      * Updates an existing laundromat in the database.
      */
     public boolean updateLaundromat(int laundromatID, String name, String address, String imagePath, String distance, String estTime, String highlights) throws SQLException {

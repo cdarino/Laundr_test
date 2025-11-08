@@ -4,12 +4,17 @@ import org.example.gui.utils.fonts.fontManager;
 
 import javax.swing.*;
 import java.awt.*;
+// new import
+import java.text.DecimalFormat;
 
 public class toReceiveCard extends JPanel {
 
-    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, etaLabel;
+    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, dateLabel;
 
-    public toReceiveCard(String orderId, String weight, String laundromat,
+    // formatter for currency
+    private static final DecimalFormat df = new DecimalFormat("₱#,##0.00");
+
+    public toReceiveCard(String orderId, String laundromat,
                          String address, String price, String eta) {
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
@@ -29,53 +34,44 @@ public class toReceiveCard extends JPanel {
         leftPanel.setOpaque(false);
         leftPanel.setAlignmentY(Component.TOP_ALIGNMENT); // Align content top
 
-        orderInfo = new JLabel("Order " + orderId + " | " + weight);
+        orderInfo = new JLabel("Order " + orderId);
         laundromatLabel = new JLabel(laundromat);
-        services = new JLabel("<html><ul style='margin:0;padding-left:15;'>"
-                + "<li>Wash and Fold</li>"
-                + "<li>Dry Clean</li>"
-                + "</ul></html>");
+        services = new JLabel("<html><ul style='margin:0;padding:0;list-style-type:none;'>" +
+                "<li>Ongoing</li>" + // status for an ongoing card
+                "</ul></html>");
 
-        fontManager.applyHeading(orderInfo,7);
+        fontManager.applyHeading(orderInfo, 7);
         fontManager.applyHeading(laundromatLabel, 7);
-        fontManager.applyHeading(services, 8);
-
-        orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        services.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         leftPanel.add(orderInfo);
-        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(laundromatLabel);
-        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
         // --- Right Panel ---
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setOpaque(false);
-        // Reduced left margin to give the right panel more space
-        rightPanel.setBorder(BorderFactory.createEmptyBorder(0, 40, 0, 0));
-        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT); // Align content top
+        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
+        // --- ui kept identical ---
         addressLabel = new JLabel("<html>" + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        etaLabel = new JLabel("<html>" + eta + "</html>");
+        dateLabel = new JLabel("<html>" + eta + "</html>"); // use orderdate
+        // ---
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
-        fontManager.applyHeading(etaLabel, 8);
+        fontManager.applyHeading(dateLabel, 8);
 
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        etaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         rightPanel.add(Box.createVerticalStrut(5));
         rightPanel.add(addressLabel);
         rightPanel.add(Box.createVerticalStrut(10));
         rightPanel.add(paymentLabel);
         rightPanel.add(Box.createVerticalStrut(10));
-        rightPanel.add(etaLabel);
+        rightPanel.add(dateLabel);
 
         add(leftPanel);
         add(Box.createHorizontalGlue()); // Pushes the right panel to the edge
@@ -93,11 +89,8 @@ public class toReceiveCard extends JPanel {
                 fontManager.applyHeading(services, 8);
                 fontManager.applyHeading(addressLabel, 8);
                 fontManager.applyHeading(paymentLabel, 8);
-                fontManager.applyHeading(etaLabel, 8);
+                fontManager.applyHeading(dateLabel, 8);
             }
-
-            revalidate();
-            repaint();
         });
     }
 }
