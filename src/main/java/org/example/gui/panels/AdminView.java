@@ -65,24 +65,38 @@ public class AdminView extends JPanel {
         refreshLaundromatsTable();
     }
 
-    /**
-     * Creates the Customer Management tab.
-     */
+    @Override
+    public void setVisible(boolean aFlag) {
+        super.setVisible(aFlag);
+        // when the panel is shown (aflag is true)
+        // refresh all the tables to get the latest data from the database.
+        if (aFlag) {
+            System.out.println("adminview is now visible, refreshing tables...");
+            refreshCustomerTable();
+            refreshLaundromatsTable();
+            if (ordersTableModel != null) {
+                ordersTableModel.setRowCount(0);
+            }
+            clearLaundromatForm();
+        }
+    }
+
+    // customer management tab
     private JPanel createCustomerPanel() {
         JPanel panel = new JPanel(new GridLayout(2, 1, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- Customer Table ---
+        // customer table
         customerTableModel = new DefaultTableModel(new String[]{"ID", "Username", "Phone", "Address", "Email"}, 0);
         customerTable = new JTable(customerTableModel);
         customerTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Add selection listener to customer table
+        // add selection listener to customer table
         customerTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int selectedRow = customerTable.getSelectedRow();
                 if (selectedRow != -1) {
-                    // Get customer ID from the first column
+                    // get customer ID from the first column
                     int custId = (int) customerTableModel.getValueAt(selectedRow, 0);
                     refreshOrdersTable(custId);
                 }
@@ -93,7 +107,7 @@ public class AdminView extends JPanel {
         customerScrollPane.setBorder(BorderFactory.createTitledBorder("Customers"));
         panel.add(customerScrollPane);
 
-        // --- Orders Table ---
+        // order table
         ordersTableModel = new DefaultTableModel(new String[]{"Order ID", "Laundromat ID", "Date", "Status", "Total"}, 0);
         ordersTable = new JTable(ordersTableModel);
         ordersTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -109,7 +123,7 @@ public class AdminView extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- Laundromat Table ---
+        // laundromat table
         laundromatsTableModel = new DefaultTableModel(new String[]{"ID", "Name", "Address", "Rating", "Image", "Distance", "Est. Time", "Highlights"}, 0);
         laundromatsTable = new JTable(laundromatsTableModel);
         laundromatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -212,9 +226,7 @@ public class AdminView extends JPanel {
         return panel;
     }
 
-    /**
-     * Refreshes the customer table with data from the DB.
-     */
+    // refresh customer table
     private void refreshCustomerTable() {
         try {
             Vector<Vector<Object>> data = adminDAO.getAllCustomers();
@@ -228,9 +240,7 @@ public class AdminView extends JPanel {
         }
     }
 
-    /**
-     * Refreshes the orders table based on the selected customer.
-     */
+    // refresh order table
     private void refreshOrdersTable(int custId) {
         try {
             Vector<Vector<Object>> data = adminDAO.getOrdersByCustomerId(custId);
@@ -244,9 +254,7 @@ public class AdminView extends JPanel {
         }
     }
 
-    /**
-     * Refreshes the laundromats table with data from the DB.
-     */
+    // referesh laundromat tbl
     private void refreshLaundromatsTable() {
         try {
             Vector<Vector<Object>> data = adminDAO.getAllLaundromats();
@@ -260,9 +268,7 @@ public class AdminView extends JPanel {
         }
     }
 
-    /**
-     * Handles the "Add New" button click.
-     */
+    // add new btn
     private void addLaundromat() {
         try {
             boolean success = adminDAO.addLaundromat(
@@ -287,9 +293,7 @@ public class AdminView extends JPanel {
         }
     }
 
-    /**
-     * Handles the "Update Selected" button click.
-     */
+    // update btn
     private void updateLaundromat() {
         if (selectedLaundromatId == -1) {
             JOptionPane.showMessageDialog(this, "Please select a laundromat from the table to update.", "No Selection", JOptionPane.WARNING_MESSAGE);
@@ -320,9 +324,7 @@ public class AdminView extends JPanel {
         }
     }
 
-    /**
-     * Handles the "Clear Form" button click.
-     */
+    // clear fields
     private void clearLaundromatForm() {
         laundromatNameField.setText("");
         laundromatAddressField.setText("");

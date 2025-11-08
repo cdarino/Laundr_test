@@ -51,7 +51,7 @@ public class recentOrders extends roundedPanel {
         setBorder(new roundedBorder(16, UIManager.getColor("listBorder"), 2));
         setOpaque(false);
 
-        // === Heading Panel ===
+        // heading panel
         headingPanel = new roundedPanel(16);
         headingPanel.setLayout(new BorderLayout());
         headingPanel.setBackgroundColorKey("Menu.background");
@@ -66,11 +66,9 @@ public class recentOrders extends roundedPanel {
         add(headingPanel);
         add(Box.createVerticalStrut(10));
 
-        // === Table ---
-        // Define columns
+        // table
         String[] columns = {"Order ID", "Laundromat", "Status"};
 
-        // Create an empty model
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -87,7 +85,6 @@ public class recentOrders extends roundedPanel {
         table.setBackground(UIManager.getColor("Panel.background"));
         table.setForeground(UIManager.getColor("Label.foreground"));
 
-        // Set table header colors
         table.getTableHeader().setBackground(UIManager.getColor("background"));
         table.getTableHeader().setForeground(UIManager.getColor("Label.foreground"));
         table.getTableHeader().setFont(fontManager.h7());
@@ -105,10 +102,7 @@ public class recentOrders extends roundedPanel {
         add(tableWrapper);
     }
 
-    /**
-     * Fetches the 3 most recent orders for the current user and
-     * populates the table.
-     */
+    // fetch 3 recent orders
     public void loadRecentOrders() {
         if (orderDAO == null || customerDAO == null) {
             System.err.println("recentOrders: DAOs not initialized. Cannot load orders.");
@@ -137,7 +131,6 @@ public class recentOrders extends roundedPanel {
             tableModel.setRowCount(0);
 
             if (data.isEmpty()) {
-                // Optionally show a message
                 tableModel.addRow(new Object[]{"-", "No recent orders found", "-"});
             } else {
                 for (Vector<Object> row : data) {
@@ -165,7 +158,6 @@ public class recentOrders extends roundedPanel {
     @Override
     public void updateUI() {
         super.updateUI();
-        // Re-apply colors on theme change
         setBackground(UIManager.getColor("Menu.background"));
         setBorder(new roundedBorder(16, UIManager.getColor("listBorder"), 2));
 
