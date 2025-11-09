@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-// new imports
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
 import org.example.database.OrderDAO;
@@ -13,10 +12,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Vector;
 import java.util.List;
-// ---
 
 import org.example.gui.utils.fonts.fontManager;
-import org.example.gui.utils.orders.toReceiveCard;
+import org.example.gui.utils.orders.orderCard;
 
 public class ToReceive extends JPanel {
     private JLabel titleLabel;
@@ -30,7 +28,7 @@ public class ToReceive extends JPanel {
     private int currentCustID = -1;
 
     public ToReceive(Mainframe frame, Landing landing) {
-        this.frame = frame;
+        this.frame = frame; // store mainframe
         this.landing = landing;
 
         // --- initialize daos ---
@@ -48,10 +46,10 @@ public class ToReceive extends JPanel {
     }
 
     private void initComponents() {
+        // Clear all components before rebuilding (good for updateUI)
         removeAll();
 
         setLayout(new BorderLayout());
-        setOpaque(false);
 
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
@@ -66,7 +64,6 @@ public class ToReceive extends JPanel {
         backLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Use the landing reference to go back
                 if (landing != null) {
                     landing.showCard("PROFILE");
                 }
@@ -77,13 +74,13 @@ public class ToReceive extends JPanel {
         titleLabel = new JLabel("To Receive");
         fontManager.applyHeading(titleLabel, 5);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // Add some space
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
         topPanel.add(backLabel);
         topPanel.add(titleLabel);
         topPanel.add(Box.createVerticalStrut(10));
 
-        // 3. Container for Cards
+        // 3. Container Panel (for cards)
         containerPanel = new JPanel();
         containerPanel.setLayout(new BoxLayout(containerPanel, BoxLayout.Y_AXIS));
         containerPanel.setOpaque(false);
@@ -92,16 +89,18 @@ public class ToReceive extends JPanel {
         JScrollPane scrollPane = new JScrollPane(containerPanel);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setOpaque(false); // scrollpane transparent
-        scrollPane.getViewport().setOpaque(false); // viewport transparent
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
 
+        // 5. Content Wrapper
         JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.setOpaque(false); // wrapper transparent
+        contentWrapper.setOpaque(false);
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60));
         contentWrapper.add(scrollPane, BorderLayout.CENTER);
 
+        // add main panels
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
 
@@ -109,7 +108,7 @@ public class ToReceive extends JPanel {
         repaint();
     }
 
-    // load order data
+    // load data
     private void loadToReceiveData() {
         if (orderDAO == null || customerDAO == null) {
             System.err.println("toreceivepanel: daos not initialized.");
@@ -132,20 +131,27 @@ public class ToReceive extends JPanel {
                 return;
             }
 
-            // fetch ongoing orders (same as in orders.java)
+            // define statuses
             List<String> ongoingStatuses = List.of("pending", "accepted", "in_progress", "ready_for_delivery", "out_for_delivery");
+
+            // fetch ongoing orders
             Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC");
 
             if (ongoingData.isEmpty()) {
-                containerPanel.add(new JLabel("You have no orders to receive."));
+                JLabel noOrdersLabel = new JLabel("You have no orders to receive.");
+                fontManager.applyHeading(noOrdersLabel, 7);
+                noOrdersLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                containerPanel.add(noOrdersLabel);
             } else {
                 for (Vector<Object> row : ongoingData) {
+                    // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
                     addToReceiveCard(
                             "#" + row.get(0).toString(),
                             (String) row.get(1), // laundromatname
                             (String) row.get(2), // laundromataddress
                             "₱" + row.get(3).toString(),
-                            row.get(4).toString()
+                            row.get(4).toString(), // date
+                            (String) row.get(5) // status
                     );
                 }
             }
@@ -159,7 +165,7 @@ public class ToReceive extends JPanel {
         }
     }
 
-    // efresh data
+    // --- new method to refresh data when panel is shown ---
     @Override
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
@@ -172,9 +178,9 @@ public class ToReceive extends JPanel {
         }
     }
 
-    // updated addtoreceivecard to use original card constructor
-    public void addToReceiveCard(String id, String shop, String address, String price, String eta) {
-        toReceiveCard card = new toReceiveCard(id, shop, address, price, eta);
+    // uses new ordercard and passes status
+    public void addToReceiveCard(String id, String shop, String address, String price, String date, String status) {
+        orderCard card = new orderCard(id, shop, address, price, date, status);
         containerPanel.add(card);
         containerPanel.add(Box.createVerticalStrut(10));
     }

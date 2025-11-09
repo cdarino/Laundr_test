@@ -11,25 +11,21 @@ import java.sql.SQLException;
 import java.util.Vector;
 import java.util.List;
 
-import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.orders.orderCard;
 import org.example.gui.utils.orders.orderStateButton;
-import org.example.gui.utils.orders.toReceiveCard;
 
 public class Orders extends JPanel {
-    private JLabel myOrderLabel;
     private JPanel cardPanel;
     private CardLayout cardLayout;
     private JPanel ongoingContainer;
     private JPanel completedContainer;
 
-    // --- new fields for db connection ---
     private Mainframe frame;
     private OrderDAO orderDAO;
     private CustomerDAO customerDAO;
     private int currentCustID = -1; // cache the customer id
-    private orderStateButton ongoingBtn; // make buttons class fields
-    private orderStateButton completedBtn; // make buttons class fields
+    private orderStateButton ongoingBtn;
+    private orderStateButton completedBtn;
 
     public Orders(Mainframe frame) {
         this.frame = frame;
@@ -51,13 +47,12 @@ public class Orders extends JPanel {
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setOpaque(false);
 
-
         JPanel orderState = new JPanel();
         orderState.setLayout(new BoxLayout(orderState, BoxLayout.X_AXIS));
         orderState.setOpaque(false);
 
-        ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing"));
-        completedBtn = new orderStateButton("Completed", () -> showCard("completed"));
+        ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing")); // use field
+        completedBtn = new orderStateButton("Completed", () -> showCard("completed")); // use field
 
         //default pressed set to ongoing
         SwingUtilities.invokeLater(() -> {
@@ -70,21 +65,18 @@ public class Orders extends JPanel {
         orderState.add(completedBtn);
         orderState.add(Box.createHorizontalStrut(60));
 
-        topPanel.add(Box.createVerticalStrut(20));
+        topPanel.add(Box.createVerticalStrut(30));
         topPanel.add(orderState);
         topPanel.add(Box.createVerticalStrut(20));
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
-        cardPanel.setOpaque(false); // make card panel transparent
 
         ongoingContainer = new JPanel();
         ongoingContainer.setLayout(new BoxLayout(ongoingContainer, BoxLayout.Y_AXIS));
         ongoingContainer.setOpaque(false);
         JScrollPane ongoingScroll = new JScrollPane(ongoingContainer);
         ongoingScroll.setBorder(BorderFactory.createEmptyBorder());
-        ongoingScroll.setOpaque(false); // scrollpane transparent
-        ongoingScroll.getViewport().setOpaque(false); // viewport transparent
         ongoingScroll.getVerticalScrollBar().setUnitIncrement(16);
         ongoingScroll.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
 
@@ -93,25 +85,24 @@ public class Orders extends JPanel {
         completedContainer.setOpaque(false);
         JScrollPane completedScroll = new JScrollPane(completedContainer);
         completedScroll.setBorder(BorderFactory.createEmptyBorder());
-        completedScroll.setOpaque(false); // scrollpane transparent
-        completedScroll.getViewport().setOpaque(false); // viewport transparent
         completedScroll.getVerticalScrollBar().setUnitIncrement(16);
         completedScroll.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
 
         cardPanel.add(ongoingScroll, "ongoing");
         cardPanel.add(completedScroll, "completed");
 
+        // cardLayout.show(cardPanel, "ongoing"); // default is set by doClick()
+
         JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.setOpaque(false); // wrapper transparent
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60));
         contentWrapper.add(cardPanel, BorderLayout.CENTER);
 
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
-
+        // --- end of your layout code ---
     }
 
-    // load all order data
+    // --- new method to load all order data ---
     private void loadOrderData() {
         if (orderDAO == null || customerDAO == null) {
             System.err.println("orderspanel: daos not initialized.");
@@ -121,6 +112,7 @@ public class Orders extends JPanel {
         try {
             String username = frame.getCurrentUser();
             if (username == null) {
+                // not logged in
                 ongoingContainer.removeAll();
                 completedContainer.removeAll();
                 ongoingContainer.repaint();
@@ -143,44 +135,34 @@ public class Orders extends JPanel {
             completedContainer.removeAll();
 
             // define statuses
-            // ongoing = all *except* completed and cancelled
             List<String> ongoingStatuses = List.of("pending", "accepted", "in_progress", "ready_for_delivery", "out_for_delivery");
-            // completed
             List<String> completedStatuses = List.of("completed");
 
             // fetch ongoing orders
-            Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC"); // show oldest first
-
-            if (ongoingData.isEmpty()) {
-                ongoingContainer.add(new JLabel("No ongoing orders found."));
-            } else {
-                for (Vector<Object> row : ongoingData) {
-                    // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate
-                    addOngoingOrder(
-                            "#" + row.get(0).toString(),
-                            (String) row.get(1), // laundromatname
-                            (String) row.get(2), // laundromataddress
-                            "₱" + row.get(3).toString(),
-                            row.get(4).toString() // date
-                    );
-                }
+            Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC");
+            for (Vector<Object> row : ongoingData) {
+                // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
+                addOngoingOrder(
+                        "#" + row.get(0).toString(),
+                        (String) row.get(1), // laundromatname
+                        (String) row.get(2), // laundromataddress
+                        "₱" + row.get(3).toString(),
+                        row.get(4).toString(), // date
+                        (String) row.get(5) // status
+                );
             }
 
             // fetch completed orders
-            Vector<Vector<Object>> completedData = orderDAO.getDynamicOrders(currentCustID, completedStatuses, "DESC"); // show newest first
-
-            if (completedData.isEmpty()) {
-                completedContainer.add(new JLabel("No completed orders found."));
-            } else {
-                for (Vector<Object> row : completedData) {
-                    addCompletedOrder(
-                            "#" + row.get(0).toString(),
-                            (String) row.get(1), // laundromatname
-                            (String) row.get(2), // laundromataddress
-                            "₱" + row.get(3).toString(),
-                            row.get(4).toString() // date
-                    );
-                }
+            Vector<Vector<Object>> completedData = orderDAO.getDynamicOrders(currentCustID, completedStatuses, "DESC");
+            for (Vector<Object> row : completedData) {
+                addCompletedOrder(
+                        "#" + row.get(0).toString(),
+                        (String) row.get(1), // laundromatname
+                        (String) row.get(2), // laundromataddress
+                        "₱" + row.get(3).toString(),
+                        row.get(4).toString(), // date
+                        (String) row.get(5) //  status
+                );
             }
 
             // refresh ui
@@ -207,16 +189,16 @@ public class Orders extends JPanel {
         }
     }
 
-    // updated addongoingorder to use new card constructor
-    public void addOngoingOrder(String id, String shop, String address, String price, String date) {
-        toReceiveCard card = new toReceiveCard(id, shop, address, price, date);
+    // uses new ordercard and passes status
+    public void addOngoingOrder(String id, String shop, String address, String price, String date, String status) {
+        orderCard card = new orderCard(id, shop, address, price, date, status);
         ongoingContainer.add(card);
         ongoingContainer.add(Box.createVerticalStrut(10));
     }
 
-    // updated addcompletedorder to use new card constructor
-    public void addCompletedOrder(String id, String shop, String address, String price, String date) {
-        orderCard card = new orderCard(id, shop, address, price, date);
+    // uses new ordercard and passes status
+    public void addCompletedOrder(String id, String shop, String address, String price, String date, String status) {
+        orderCard card = new orderCard(id, shop, address, price, date, status);
         completedContainer.add(card);
         completedContainer.add(Box.createVerticalStrut(10));
     }

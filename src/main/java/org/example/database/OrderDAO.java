@@ -9,7 +9,6 @@ import java.util.Vector;
 
 /**
  * Data Access Object for Order-related queries.
- *
  */
 public class OrderDAO {
 
@@ -20,8 +19,7 @@ public class OrderDAO {
     }
 
     /**
-     * Fetches the 3 most recent orders for the dashboard's recentOrders panel.
-     *
+     * ftches the 3 most recent orders for recentOrders panel.
      */
     public Vector<Vector<Object>> getRecentOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();
@@ -30,7 +28,7 @@ public class OrderDAO {
             return data;
         }
 
-        // this query joins orders and laundromat to get the laundromat's name
+        // joins orders and laundromat to get the laundromat's name
         // and orders by date descending, limiting to 3.
         String query = "SELECT o.orderID, l.laundromatName, o.orderStatus " +
                 "FROM orders o " +
@@ -57,9 +55,9 @@ public class OrderDAO {
         return data;
     }
 
-    /**
-     * A dynamic method to fetch orders based on a list of statuses.
-     * Used by both the "Orders" panel and the "To Receive" panel.
+    /*
+     * fetch orders based on a list of statuses
+     * used by both the "Orders" panel and the "To Receive" panel
      */
     public Vector<Vector<Object>> getDynamicOrders(int custID, List<String> statuses, String sortOrder) {
         Vector<Vector<Object>> data = new Vector<>();
@@ -67,8 +65,6 @@ public class OrderDAO {
             return data;
         }
 
-        // 1. build the "IN (...)" part of the query
-        // e.g., "'pending', 'accepted', 'in_progress'"
         StringBuilder statusListString = new StringBuilder();
         for (int i = 0; i < statuses.size(); i++) {
             statusListString.append("'").append(statuses.get(i)).append("'");
@@ -77,8 +73,7 @@ public class OrderDAO {
             }
         }
 
-        // 2. build the full query
-        String query = "SELECT o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate " +
+        String query = "SELECT o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus " +
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
                 "WHERE o.custID = " + custID + " " +
@@ -94,8 +89,8 @@ public class OrderDAO {
                 row.add(rs.getString("laundromatName"));
                 row.add(rs.getString("laundromatAddress"));
                 row.add(rs.getBigDecimal("totalAmount"));
-                // format the datetime as a string
                 row.add(rs.getTimestamp("orderDate").toString());
+                row.add(rs.getString("orderStatus"));
                 data.add(row);
             }
         } catch (SQLException e) {
@@ -114,7 +109,7 @@ public class OrderDAO {
             return data;
         }
 
-        // this query finds all of a customer's 'completed' orders
+        // finds all of a customer's 'completed' orders
         String query = "SELECT o.orderID, o.laundromatID, l.laundromatName " +
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
@@ -136,5 +131,52 @@ public class OrderDAO {
             e.printStackTrace();
         }
         return data;
+    }
+
+    /**
+     * Updates the status of a specific order.
+     * This is the "Subject's" action in the Observer pattern.
+     * After updating, it creates a notification.
+     */
+    public boolean updateOrderStatus(int orderID, String newStatus) {
+        if (connection == null) {
+            System.err.println("Cannot update status — no database connection.");
+            return false;
+        }
+
+        // a customerid is needed for the notification. let's find it.
+        int custID = -1;
+        String findCustQuery = "SELECT custID FROM orders WHERE orderID = " + orderID;
+
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery(findCustQuery)) {
+            if (rs.next()) {
+                custID = rs.getInt("custID");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false; // can't find customer, so don't update
+        }
+
+        if (custID == -1) {
+            System.err.println("Cannot update status — orderID not found.");
+            return false;
+        }
+
+//        // 1. update the order status
+//        String updateQuery = "UPDATE orders SET orderStatus = '" + newStatus + "' WHERE orderID = " + orderID;
+//        try (Statement st = connection.createStatement()) {
+//            int rowsAffected = st.executeUpdate(updateQuery);
+//            if (rowsAffected > 0) {
+//                // 2. notify the observer (by creating a notification)
+//                String message = "Your order #" + orderID + " is now: " + newStatus;
+//                NotificationDAO notificationDAO = new NotificationDAO(connection);
+//                notificationDAO.createNotification(custID, message);
+//                return true;
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        }
+        return false;
     }
 }

@@ -1,21 +1,20 @@
 package org.example.gui.utils.orders;
 
 import org.example.gui.utils.fonts.fontManager;
+import org.example.gui.utils.orders.states.OrderState;
+import org.example.gui.utils.orders.states.OrderStateFactory;
 
 import javax.swing.*;
 import java.awt.*;
-// new import
 import java.text.DecimalFormat;
 
 public class orderCard extends JPanel {
 
-    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, dateLabel;
-
-    // formatter for currency
+    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, dateLabel, stateLabel;
     private static final DecimalFormat df = new DecimalFormat("₱#,##0.00");
 
     public orderCard(String orderId, String laundromat,
-                     String address, String price, String date) {
+                     String address, String price, String date, String orderStatus) { // <-- changed here
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBackground(UIManager.getColor("background"));
@@ -26,7 +25,7 @@ public class orderCard extends JPanel {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // left
+        // === LEFT COLUMN ===
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setOpaque(false);
@@ -34,28 +33,34 @@ public class orderCard extends JPanel {
 
         orderInfo = new JLabel("Order " + orderId);
         laundromatLabel = new JLabel(laundromat);
-        services = new JLabel("<html><ul style='margin:0;padding:0;list-style-type:none;'>" +
-                "<li>Completed</li>" + // status for a completed card
-                "</ul></html>");
-        // ---
+        services = new JLabel("<html><ul style='margin:0;padding-left:20px;'>" +
+                "<li>Wash & Fold</li>" +
+                "<li>Dry Cleaning</li>" +
+                "</ul></html>"); // placeholder
 
         fontManager.applyHeading(orderInfo, 7);
         fontManager.applyHeading(laundromatLabel, 7);
+        fontManager.applyHeading(services, 8);
+
+        orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        services.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         leftPanel.add(orderInfo);
         leftPanel.add(laundromatLabel);
+        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
-        // --- Middle Panel ---
+        // === MIDDLE COLUMN ===
         JPanel middlePanel = new JPanel();
         middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
         middlePanel.setOpaque(false);
-        middlePanel.setAlignmentY(Component.TOP_ALIGNMENT); // align content top
+        middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // padding
 
-        // --- ui kept identical ---
         addressLabel = new JLabel("<html>" + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        dateLabel = new JLabel("<html>" + date + "</html>"); // use orderdate
-        // ---
+        dateLabel = new JLabel("<html>" + date + "</html>");
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
@@ -73,8 +78,31 @@ public class orderCard extends JPanel {
         middlePanel.add(Box.createVerticalStrut(10));
         middlePanel.add(dateLabel);
 
+        // === RIGHT COLUMN (STATE) ===
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+
+        stateLabel = new JLabel(); // created empty
+        stateLabel.setOpaque(true);
+        stateLabel.setForeground(Color.WHITE); // text is always white
+        stateLabel.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+        stateLabel.setFont(stateLabel.getFont().deriveFont(Font.BOLD, 11f));
+
+        // --- apply the state pattern ---
+        OrderState state = OrderStateFactory.getState(orderStatus);
+        stateLabel.setText(state.getText());
+        stateLabel.setBackground(state.getColor());
+        // ---
+
+        rightPanel.add(stateLabel);
+
+        // === ADD TO MAIN CARD ===
         add(leftPanel);
+        add(Box.createHorizontalGlue()); // pushes the right panel to the edge
         add(middlePanel);
+        add(Box.createHorizontalGlue());
+        add(rightPanel);
     }
 
     @Override
