@@ -2,7 +2,8 @@ package org.example.database;
 
 import java.sql.*;
 import java.util.Vector;
-
+import org.example.database.NotificationDAO;
+import java.util.List;
 /**
  * DAO for Admin operations.
  * Manages Admin Login, Customer/Order viewing, and Laundromat C.R.U.D.
@@ -182,5 +183,49 @@ public class AdminDAO {
             int rowsAffected = st.executeUpdate(query);
             return rowsAffected > 0;
         }
+    }
+    // find the custid for a given orderid.
+    //     * needed by updateorderstatus to create a notification.
+    private int getCustIDForOrder(int orderID) throws SQLException {
+        String findCustQuery = "SELECT custID FROM orders WHERE orderID = " + orderID;
+
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery(findCustQuery)) {
+            if (rs.next()) {
+                return rs.getInt("custID");
+            }
+        }
+        return -1; // order not found
+    }
+
+    /**
+     * updates the status of a specific order.
+     * after updating, it creates a notification.
+     */
+    public boolean updateOrderStatus(int orderID, String newStatus) throws SQLException {
+        if (connection == null) {
+            throw new SQLException("cannot update status — no database connection.");
+        }
+
+        // a customerid is needed for the notification. let's find it.
+        int custID = getCustIDForOrder(orderID);
+
+        if (custID == -1) {
+            throw new SQLException("cannot update status — orderid " + orderID + " not found.");
+        }
+
+        // 1. update the order status
+        String updateQuery = "UPDATE orders SET orderStatus = '" + newStatus + "' WHERE orderID = " + orderID;
+        try (Statement st = connection.createStatement()) {
+            int rowsAffected = st.executeUpdate(updateQuery);
+            if (rowsAffected > 0) {
+                // 2. notify the observer (by creating a notification)
+                String message = "Your order #" + orderID + " is now: " + newStatus;
+                NotificationDAO notificationDAO = new NotificationDAO(connection);
+                notificationDAO.createNotification(custID, message);
+                return true;
+            }
+        }
+        return false;
     }
 }

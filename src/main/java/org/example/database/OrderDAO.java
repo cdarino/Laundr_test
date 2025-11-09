@@ -163,20 +163,20 @@ public class OrderDAO {
             return false;
         }
 
-//        // 1. update the order status
-//        String updateQuery = "UPDATE orders SET orderStatus = '" + newStatus + "' WHERE orderID = " + orderID;
-//        try (Statement st = connection.createStatement()) {
-//            int rowsAffected = st.executeUpdate(updateQuery);
-//            if (rowsAffected > 0) {
-//                // 2. notify the observer (by creating a notification)
-//                String message = "Your order #" + orderID + " is now: " + newStatus;
-//                NotificationDAO notificationDAO = new NotificationDAO(connection);
-//                notificationDAO.createNotification(custID, message);
-//                return true;
-//            }
-//        } catch (SQLException e) {
-//            e.printStackTrace();
-//        }
+        // 1. update the order status
+        String updateQuery = "UPDATE orders SET orderStatus = '" + newStatus + "' WHERE orderID = " + orderID;
+        try (Statement st = connection.createStatement()) {
+            int rowsAffected = st.executeUpdate(updateQuery);
+            if (rowsAffected > 0) {
+                // 2. notify the observer (by creating a notification)
+                String message = "Your order #" + orderID + " is now: " + newStatus;
+                NotificationDAO notificationDAO = new NotificationDAO(connection);
+                notificationDAO.createNotification(custID, message);
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return false;
     }
 }

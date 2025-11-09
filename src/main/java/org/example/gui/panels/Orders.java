@@ -99,10 +99,9 @@ public class Orders extends JPanel {
 
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
-        // --- end of your layout code ---
     }
 
-    // --- new method to load all order data ---
+    // load all order data ---
     private void loadOrderData() {
         if (orderDAO == null || customerDAO == null) {
             System.err.println("orderspanel: daos not initialized.");

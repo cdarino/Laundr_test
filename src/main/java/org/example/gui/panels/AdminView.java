@@ -12,6 +12,8 @@ import java.awt.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Vector;
+import javax.swing.event.TableModelEvent;
+import javax.swing.table.TableColumn;
 
 public class AdminView extends JPanel {
     private Mainframe frame;
@@ -108,15 +110,68 @@ public class AdminView extends JPanel {
         panel.add(customerScrollPane);
 
         // order table
+        String[] ordersColumns = {"Order ID", "Laundromat ID", "Date", "Status", "Total"};
         ordersTableModel = new DefaultTableModel(new String[]{"Order ID", "Laundromat ID", "Date", "Status", "Total"}, 0);
         ordersTable = new JTable(ordersTableModel);
         ordersTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        String[] statuses = {
+                "pending", "accepted", "in_progress",
+                "ready_for_delivery", "out_for_delivery",
+                "completed"//, "cancelled"
+        };
+        JComboBox<String> statusComboBox = new JComboBox<>(statuses);
+
+        TableColumn statusColumn = ordersTable.getColumnModel().getColumn(3);
+        // set its cell editor to be the combobox
+        statusColumn.setCellEditor(new DefaultCellEditor(statusComboBox));
+
+        ordersTableModel.addTableModelListener(e -> {
+            // check if this was an 'update' event
+            if (e.getType() == TableModelEvent.UPDATE) {
+                int row = e.getFirstRow();
+                int col = e.getColumn();
+
+                // check if the 'status' column (index 3) was the one changed
+                if (col == 3) {
+                    // get the data from the updated row
+                    int orderID = (int) ordersTableModel.getValueAt(row, 0);
+                    String newStatus = (String) ordersTableModel.getValueAt(row, col);
+
+                    // call the method to update the database
+                    handleStatusUpdate(orderID, newStatus);
+                }
+            }
+        });
 
         JScrollPane ordersScrollPane = new JScrollPane(ordersTable);
         ordersScrollPane.setBorder(BorderFactory.createTitledBorder("Customer's Orders"));
         panel.add(ordersScrollPane);
 
         return panel;
+    }
+
+    private void handleStatusUpdate(int orderID, String newStatus) {
+        if (adminDAO == null) {
+            JOptionPane.showMessageDialog(this, "database connection error.", "error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            boolean success = adminDAO.updateOrderStatus(orderID, newStatus);
+            if (success) {
+                JOptionPane.showMessageDialog(this,
+                        "Order #" + orderID + " status updated to '" + newStatus + "'.\n" +
+                                "a notification has been sent to the user.",
+                        "status updated",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "failed to update order status.", "error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "database error: " + e.getMessage(), "sql exception", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createLaundromatPanel() {
