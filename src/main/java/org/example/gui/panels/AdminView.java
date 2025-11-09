@@ -252,7 +252,6 @@ public class AdminView extends JPanel {
 
         // Row 5: Highlights
         gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        // --- UPDATED: Added a more descriptive label ---
         formPanel.add(new JLabel("Highlights (comma-separated):"), gbc);
         gbc.gridx = 1; gbc.gridy = 5; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
         laundromatHighlightsField = new JTextField(20);
