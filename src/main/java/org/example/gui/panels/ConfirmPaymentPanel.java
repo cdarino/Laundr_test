@@ -8,6 +8,7 @@ import org.example.gui.utils.fonts.fontLoader;
 import org.example.gui.utils.fonts.fontManager;
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
+import org.example.database.OrderDAO;
 import com.formdev.flatlaf.FlatLaf;
 
 import javax.swing.*;
@@ -16,6 +17,8 @@ import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 public class ConfirmPaymentPanel extends JPanel {
     private static final Color FIXED_BACKGROUND = new Color(245, 245, 245);
@@ -441,6 +444,11 @@ public class ConfirmPaymentPanel extends JPanel {
         
         confirmPaymentBtn = new buttonCreator("Confirm Payment", "Button.font", () -> {
             if (validatePayment()) {
+                // NEW: Create the order in DB before navigating
+                if (!createAndPersistOrder()) {
+                    // If creation fails, stop here and show error (already shown inside)
+                    return;
+                }
                 JOptionPane.showMessageDialog(this,
                     "Payment confirmed! Your order has been placed successfully.",
                     "Success",
@@ -459,6 +467,106 @@ public class ConfirmPaymentPanel extends JPanel {
         bottomPanel.add(rightButtonPanel, BorderLayout.EAST);
         
         return bottomPanel;
+    }
+
+    // NEW: persist order using same customer resolution as Orders panel
+    private boolean createAndPersistOrder() {
+        try {
+            // Resolve current username from the top-level window (Mainframe)
+            Window w = SwingUtilities.getWindowAncestor(this);
+            String currentUser = null;
+            if (w instanceof org.example.gui.Mainframe) {
+                currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
+            }
+            if (currentUser == null || currentUser.isBlank()) {
+                JOptionPane.showMessageDialog(this,
+                        "You must be logged in to place an order.",
+                        "Not Logged In",
+                        JOptionPane.WARNING_MESSAGE);
+                return false;
+            }
+
+            Connection conn = DBConnect.getConnection();
+            if (conn == null || conn.isClosed()) {
+                JOptionPane.showMessageDialog(this,
+                        "No database connection.",
+                        "Database Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Get custID using the same DAO logic Orders uses
+            CustomerDAO cdao = new CustomerDAO(conn);
+            int custID = cdao.getCustomerId(currentUser);
+            if (custID <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "Could not resolve your customer profile.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Pick a laundromatID — if you track selection elsewhere, replace this lookup.
+            int laundromatID = 0;
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT laundromatID FROM laundromat ORDER BY laundromatID LIMIT 1")) {
+                if (rs.next()) laundromatID = rs.getInt(1);
+            }
+            if (laundromatID <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "No laundromat available to accept the order.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Compute a simple total from the quantity text (keeps your UI unchanged)
+            double total = 0.0;
+            try {
+                if (quantityText != null) {
+                    String digits = quantityText.replaceAll("[^0-9.]", "");
+                    if (!digits.isEmpty()) {
+                        total = Double.parseDouble(digits) * 50.0; // nominal price per unit
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            String instructionsPlain = extractTextFromHTML(instructionsText);
+            String paymentMethod = buildPaymentMethodString();
+
+            OrderDAO odao = new OrderDAO(conn);
+            int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
+            if (newId <= 0) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to create order.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Let containers listening for "orderCreated" update if they want
+            firePropertyChange("orderCreated", -1, newId);
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Unexpected error while creating order: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+
+    private String buildPaymentMethodString() {
+        if (cashOnPickupBtn.isSelected()) return "cash_on_pickup";
+        if (cashlessBtn.isSelected()) {
+            if (paymentAppCombo.getSelectedIndex() <= 0) return "cashless_unselected";
+            PaymentAppItem item = (PaymentAppItem) paymentAppCombo.getSelectedItem();
+            String phone = phoneNumberField.getText().trim();
+            return item.getName() + (phone.isEmpty() ? "" : " (" + phone + ")");
+        }
+        return "none_selected";
     }
     
     private void styleButton(buttonCreator btn) {
@@ -546,7 +654,7 @@ public class ConfirmPaymentPanel extends JPanel {
     private String extractTextFromHTML(String html) {
         if (html == null) return "None";
         String text = html.replaceAll("<[^>]*>", "");
-        text = text.replace("&bull;", "•");
+        text = text.replace("&bull;", "\u2022");
         text = text.replace("&nbsp;", " ");
         return text.trim().isEmpty() ? "None" : text.trim();
     }

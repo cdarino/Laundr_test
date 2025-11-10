@@ -204,7 +204,7 @@ public class PickupPanel extends JPanel {
         serviceTypeRadioPanel.setMaximumSize(new Dimension(450, 30));
         
         serviceTypeGroup = new ButtonGroup();
-        kiloBtn = new JRadioButton("Kilograms");
+        kiloBtn = new JRadioButton("Loads");
         articleBtn = new JRadioButton("Articles of Clothing");
         
         kiloBtn.setFont(UIManager.getFont("Label.font"));
@@ -556,7 +556,7 @@ public class PickupPanel extends JPanel {
         if (quantityText.isEmpty() || serviceType.isEmpty()) {
             quantitySummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Quantity:<br>0</body></html>");
         } else {
-            String unit = serviceType.equals("Kilograms") ? "kg" : "pcs";
+            String unit = serviceType.equals("Loads") ? "loads" : "pcs";
             quantitySummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Quantity:<br>" + 
                 quantityText + " " + unit + "</body></html>");
         }

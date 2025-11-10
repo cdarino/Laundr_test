@@ -1,9 +1,6 @@
 package org.example.database;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.List;
 import java.util.Vector;
 
@@ -12,42 +9,35 @@ import java.util.Vector;
  */
 public class OrderDAO {
 
-    private Connection connection;
+    private final Connection connection;
 
     public OrderDAO(Connection connection) {
         this.connection = connection;
     }
 
     /**
-     * ftches the 3 most recent orders for recentOrders panel.
+     * Recent orders helper (used elsewhere).
      */
     public Vector<Vector<Object>> getRecentOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();
-        if (connection == null) {
-            System.err.println("[OrderDAO.getRecentOrders] Cannot get orders — no database connection.");
-            return data;
-        }
+        if (connection == null) return data;
 
-        // joins orders and laundromat to get the laundromat's name
-        // and orders by date descending, limiting to 3.
-        String query = "SELECT o.orderID, l.laundromatName, o.orderStatus " +
+        String query =
+                "SELECT o.orderID, l.laundromatName, o.orderStatus " +
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
                 "WHERE o.custID = " + custID + " " +
-                "ORDER BY o.orderDate DESC " +
-                "LIMIT 3";
+                "ORDER BY o.orderDate DESC LIMIT 3";
 
         try (Statement st = connection.createStatement();
              ResultSet rs = st.executeQuery(query)) {
 
-            int rowsFound = 0;
             while (rs.next()) {
                 Vector<Object> row = new Vector<>();
                 row.add(rs.getInt("orderID"));
                 row.add(rs.getString("laundromatName"));
                 row.add(rs.getString("orderStatus"));
                 data.add(row);
-                rowsFound++;
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -56,7 +46,7 @@ public class OrderDAO {
     }
 
     /*
-     * fetch orders based on a list of statuses
+     * Fetch orders based on a list of statuses
      * used by both the "Orders" panel and the "To Receive" panel
      */
     public Vector<Vector<Object>> getDynamicOrders(int custID, List<String> statuses, String sortOrder) {
@@ -77,7 +67,7 @@ public class OrderDAO {
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
                 "WHERE o.custID = " + custID + " " +
-                "AND o.orderStatus IN (" + statusListString.toString() + ") " +
+                "AND o.orderStatus IN (" + statusListString + ") " +
                 "ORDER BY o.orderDate " + sortOrder;
 
         try (Statement st = connection.createStatement();
@@ -100,26 +90,20 @@ public class OrderDAO {
     }
 
     /**
-     * Fetches *all* completed orders for a user.
-     * Used by the "ToRate" panel.
+     * Fetches all completed orders for a user.
      */
     public Vector<Vector<Object>> getAllCompletedOrders(int custID) {
         Vector<Vector<Object>> data = new Vector<>();
-        if (connection == null) {
-            return data;
-        }
+        if (connection == null) return data;
 
-        // finds all of a customer's 'completed' orders
-        String query = "SELECT o.orderID, o.laundromatID, l.laundromatName " +
+        String query =
+                "SELECT o.orderID, o.laundromatID, l.laundromatName " +
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
-                "WHERE o.custID = " + custID + " " +
-                "AND o.orderStatus = 'completed' " +
-                "ORDER BY o.orderDate DESC";
+                "WHERE o.custID = " + custID + " AND o.orderStatus = 'completed'";
 
         try (Statement st = connection.createStatement();
              ResultSet rs = st.executeQuery(query)) {
-
             while (rs.next()) {
                 Vector<Object> row = new Vector<>();
                 row.add(rs.getInt("orderID"));
@@ -133,50 +117,53 @@ public class OrderDAO {
         return data;
     }
 
+    // ================== NEW: ORDER CREATION ==================
+
     /**
-     * Updates the status of a specific order.
-     * This is the "Subject's" action in the Observer pattern.
-     * After updating, it creates a notification.
+     * Inserts a new order and returns the generated orderID.
+     * Assumes table has:
+     *   custID, laundromatID, orderDate (DEFAULT CURRENT_TIMESTAMP),
+     *   orderStatus, totalAmount, instructions, paymentMethod
+     *
+     * If your schema differs, adjust the SQL accordingly.
+     *
+     * @return generated orderID or -1 if failed.
      */
-    public boolean updateOrderStatus(int orderID, String newStatus) {
+    public int createOrder(int custID,
+                           int laundromatID,
+                           double totalAmount,
+                           String instructions,
+                           String paymentMethod) {
         if (connection == null) {
-            System.err.println("Cannot update status — no database connection.");
-            return false;
+            System.err.println("createOrder: No database connection.");
+            return -1;
         }
 
-        // a customerid is needed for the notification. let's find it.
-        int custID = -1;
-        String findCustQuery = "SELECT custID FROM orders WHERE orderID = " + orderID;
+        String sql = "INSERT INTO orders " +
+                     "(custID, laundromatID, orderDate, orderStatus, totalAmount, instructions, paymentMethod) " +
+                     "VALUES (?, ?, CURRENT_TIMESTAMP, 'pending', ?, ?, ?)";
 
-        try (Statement st = connection.createStatement();
-             ResultSet rs = st.executeQuery(findCustQuery)) {
-            if (rs.next()) {
-                custID = rs.getInt("custID");
+        try (PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setInt(1, custID);
+            ps.setInt(2, laundromatID);
+            ps.setDouble(3, totalAmount);
+            ps.setString(4, instructions != null ? instructions : "");
+            ps.setString(5, paymentMethod != null ? paymentMethod : "unknown");
+
+            int affected = ps.executeUpdate();
+            if (affected == 0) {
+                System.err.println("createOrder: Insert affected 0 rows.");
+                return -1;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false; // can't find customer, so don't update
-        }
 
-        if (custID == -1) {
-            System.err.println("Cannot update status — orderID not found.");
-            return false;
-        }
-
-        // 1. update the order status
-        String updateQuery = "UPDATE orders SET orderStatus = '" + newStatus + "' WHERE orderID = " + orderID;
-        try (Statement st = connection.createStatement()) {
-            int rowsAffected = st.executeUpdate(updateQuery);
-            if (rowsAffected > 0) {
-                // 2. notify the observer (by creating a notification)
-                String message = "Your order #" + orderID + " is now: " + newStatus;
-                NotificationDAO notificationDAO = new NotificationDAO(connection);
-                notificationDAO.createNotification(custID, message);
-                return true;
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getInt(1);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return false;
+        return -1;
     }
 }
