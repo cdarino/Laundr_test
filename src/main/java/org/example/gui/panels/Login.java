@@ -1,5 +1,6 @@
 package org.example.gui.panels;
 
+import org.example.database.AdminDAO;
 import org.example.database.DBConnect;
 import org.example.database.CustomerDAO;
 import org.example.gui.Mainframe;
@@ -116,8 +117,9 @@ public class Login extends JPanel {
             return;
         }
 
-        try (Connection conn = DBConnect.getConnection()) {
-            if (conn == null) {
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn == null || conn.isClosed()) {
                 JOptionPane.showMessageDialog(this,
                         "Failed to connect to database.",
                         "Database Error",
@@ -125,10 +127,24 @@ public class Login extends JPanel {
                 return;
             }
 
-            CustomerDAO dao = new CustomerDAO(conn);
-            boolean success = dao.validateLogin(username, password);
+            AdminDAO adminDAO = new AdminDAO(conn);
+            CustomerDAO customerDAO = new CustomerDAO(conn);
 
-            if (success) {
+            boolean isAdmin = adminDAO.validateLogin(username, password);
+            if (isAdmin) {
+                JOptionPane.showMessageDialog(this,
+                        "Admin login successful!",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                frame.showCard("ADMIN");
+
+                clearFields();
+                return;
+            }
+
+            boolean isCustomer = customerDAO.validateLogin(username, password);
+            if (isCustomer) {
                 frame.setCurrentUser(username);
 
                 JOptionPane.showMessageDialog(this,
@@ -138,15 +154,14 @@ public class Login extends JPanel {
 
                 frame.showCard("LANDING");
 
-                // clear fields
-                usernameField.setText("");
-                passwordField.setText("");
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Invalid username or password.",
-                        "Login Failed",
-                        JOptionPane.ERROR_MESSAGE);
+                clearFields();
+                return;
             }
+
+            JOptionPane.showMessageDialog(this,
+                    "Invalid username or password.",
+                    "Login Failed",
+                    JOptionPane.ERROR_MESSAGE);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -155,6 +170,11 @@ public class Login extends JPanel {
                     "Exception",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void clearFields() {
+        usernameField.setText("");
+        passwordField.setText("");
     }
 
     @Override

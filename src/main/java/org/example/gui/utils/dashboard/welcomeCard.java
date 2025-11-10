@@ -28,9 +28,12 @@ public class welcomeCard extends JPanel {
         textPanel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 0));
 
         welcome = new JLabel("Welcome back,");
+        // --- MODIFICATION: Apply font/color on init ---
         fontManager.applyHeading(welcome, 1);
 
-        user = new JLabel(username + " !");
+        // --- MODIFICATION: Check for null username to prevent startup error ---
+        user = new JLabel(username != null ? username + " !" : "!");
+        // --- MODIFICATION: Apply font/color on init ---
         fontManager.applyHeading(user, 2);
 
         textPanel.add(welcome);
@@ -53,15 +56,21 @@ public class welcomeCard extends JPanel {
         card.setPreferredSize(new Dimension(0, CARD_HEIGHT));
 
         add(card, BorderLayout.CENTER);
+
     }
 
+    // Allows Dashboard to update the username after login.
+    public void updateUser(String username) {
+        if (user != null) {
+            user.setText(username != null ? username + " !" : "!");
+        }
+    }
     @Override
     public void updateUI() {
         super.updateUI();
-        if (welcome != null) fontManager.applyHeading(welcome, 1);
-        if (user != null) fontManager.applyHeading(user, 2);
-        repaint();
+        if (welcome != null && user != null) {
+            fontManager.applyHeading(welcome, 1);
+            fontManager.applyHeading(user, 2);
+        }
     }
-
 }
-

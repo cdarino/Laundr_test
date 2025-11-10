@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
+import org.example.gui.panels.AdminView;
 import org.example.gui.panels.Landing;
 import org.example.gui.panels.Login;
 import org.example.gui.panels.Register;
@@ -62,6 +63,7 @@ public class Mainframe extends JFrame {
         mainPanel.add(new Login(this), "LOGIN");
         mainPanel.add(new Register(this), "REGISTER");
         mainPanel.add(new Landing(this), "LANDING");
+        mainPanel.add(new AdminView(this), "ADMIN");
 
         setContentPane(mainPanel);
         showCard("LOGIN");
@@ -76,6 +78,7 @@ public class Mainframe extends JFrame {
     }
 
     public void toggleTheme() {
+        // manage themes
         dark = !dark;
 
         // Take a snapshot of the current UI, switch LAF, then animate/hide the snapshot.

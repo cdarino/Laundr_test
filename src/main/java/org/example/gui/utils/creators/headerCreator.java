@@ -16,10 +16,13 @@ public class headerCreator extends JPanel {
     private final JButton burgerBtn;
     private final JButton themeToggleBtn;
     private final JLabel logoLabel;
+    private final Runnable toggleNotificationsAction;
+    private final JButton notificationBtn;
 
-    public headerCreator(Mainframe frame, Runnable toggleSidebarAction) {
+    public headerCreator(Mainframe frame, Runnable toggleSidebarAction, Runnable toggleNotificationsAction) {
         this.frame = frame;
         this.toggleSidebarAction = toggleSidebarAction;
+        this.toggleNotificationsAction = toggleNotificationsAction;
 
         setPreferredSize(new Dimension(0, 60));
         setLayout(new BorderLayout());
@@ -74,10 +77,44 @@ public class headerCreator extends JPanel {
         logoLabel = new JLabel(iconCreator.getIcon("Icons/logos/logoWhite.svg", 70, 50));
         leftPanel.add(logoLabel);
 
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
+        rightPanel.setOpaque(false);
+
         themeToggleBtn = new themeToggleButton(frame::toggleTheme);
+        rightPanel.add(themeToggleBtn);
+
+        notificationBtn = new JButton();
+        notificationBtn.setPreferredSize(new Dimension(44, 44));
+        notificationBtn.setFocusPainted(false);
+        notificationBtn.setBorderPainted(false);
+        notificationBtn.setContentAreaFilled(true);
+        notificationBtn.setOpaque(true);
+        notificationBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        notificationBtn.addActionListener(e -> {
+            if (toggleNotificationsAction != null) toggleNotificationsAction.run();
+        });
+
+        // mouse behavior
+        notificationBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            private boolean inside = false;
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                inside = true;
+                notificationBtn.setBackground(resolveHoverColor());
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                inside = false;
+                notificationBtn.setBackground(resolveBaseColor());
+            }
+        });
+
+        rightPanel.add(notificationBtn);
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 5, 0));
 
         add(leftPanel, BorderLayout.WEST);
-        add(themeToggleBtn, BorderLayout.EAST);
+        add(rightPanel, BorderLayout.EAST);
 
         updateUI();
     }
@@ -109,6 +146,12 @@ public class headerCreator extends JPanel {
             burgerBtn.setIcon(iconCreator.getIcon("Icons/burgerMenu.svg", 28, 28));
             burgerBtn.setBackground(resolveBaseColor());
             burgerBtn.setToolTipText("Toggle sidebar");
+        }
+
+        if (notificationBtn != null) {
+            notificationBtn.setIcon(iconCreator.getIcon("Icons/notification.svg", 24, 24));
+            notificationBtn.setBackground(resolveBaseColor());
+            notificationBtn.setToolTipText("Toggle notifications");
         }
     }
 

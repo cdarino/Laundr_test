@@ -2,49 +2,61 @@ package org.example.gui.panels;
 
 import javax.swing.*;
 import java.awt.*;
+import org.example.database.CustomerDAO;
+import org.example.database.DBConnect;
+import org.example.database.OrderDAO;
+import org.example.gui.Mainframe;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Vector;
+import java.util.List;
 
-import org.example.gui.utils.fonts.fontManager;
 import org.example.gui.utils.orders.orderCard;
 import org.example.gui.utils.orders.orderStateButton;
 
 public class Orders extends JPanel {
-    private JLabel myOrderLabel;
     private JPanel cardPanel;
     private CardLayout cardLayout;
     private JPanel ongoingContainer;
     private JPanel completedContainer;
 
-    public Orders() {
+    private Mainframe frame;
+    private OrderDAO orderDAO;
+    private CustomerDAO customerDAO;
+    private int currentCustID = -1; // cache the customer id
+    private orderStateButton ongoingBtn;
+    private orderStateButton completedBtn;
+
+    public Orders(Mainframe frame) {
+        this.frame = frame;
+
+        // --- initialize daos ---
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null && !conn.isClosed()) {
+                this.orderDAO = new OrderDAO(conn);
+                this.customerDAO = new CustomerDAO(conn);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         setLayout(new BorderLayout());
 
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setOpaque(false);
 
-        myOrderLabel = new JLabel("My Orders");
-        myOrderLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        fontManager.applyHeading(myOrderLabel, 3);
-
-        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        labelPanel.setOpaque(false);
-        labelPanel.setBorder(BorderFactory.createEmptyBorder(0, 40, 0, 0));
-        labelPanel.add(myOrderLabel);
-
         JPanel orderState = new JPanel();
         orderState.setLayout(new BoxLayout(orderState, BoxLayout.X_AXIS));
         orderState.setOpaque(false);
 
-        orderStateButton ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing"));
-        orderStateButton completedBtn = new orderStateButton("Completed", () -> showCard("completed"));
+        ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing")); // use field
+        completedBtn = new orderStateButton("Completed", () -> showCard("completed")); // use field
 
         //default pressed set to ongoing
         SwingUtilities.invokeLater(() -> {
-            ongoingBtn.setBackground(UIManager.getColor("Sidebar.hoverBackground"));
-            try {
-                java.lang.reflect.Field f = orderStateButton.class.getDeclaredField("activeButton");
-                f.setAccessible(true);
-                f.set(null, ongoingBtn);
-            } catch (Exception ignored) {}
+            ongoingBtn.doClick();
         });
 
         orderState.add(Box.createHorizontalStrut(60));
@@ -53,9 +65,7 @@ public class Orders extends JPanel {
         orderState.add(completedBtn);
         orderState.add(Box.createHorizontalStrut(60));
 
-        topPanel.add(Box.createVerticalStrut(20));
-        topPanel.add(labelPanel);
-        topPanel.add(Box.createVerticalStrut(10));
+        topPanel.add(Box.createVerticalStrut(30));
         topPanel.add(orderState);
         topPanel.add(Box.createVerticalStrut(20));
 
@@ -81,7 +91,7 @@ public class Orders extends JPanel {
         cardPanel.add(ongoingScroll, "ongoing");
         cardPanel.add(completedScroll, "completed");
 
-        cardLayout.show(cardPanel, "ongoing");
+        // cardLayout.show(cardPanel, "ongoing"); // default is set by doClick()
 
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60));
@@ -89,46 +99,107 @@ public class Orders extends JPanel {
 
         add(topPanel, BorderLayout.NORTH);
         add(contentWrapper, BorderLayout.CENTER);
-
-        addOngoingOrder("Order #001", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
-
-        addOngoingOrder("Order #002", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
-
-        addOngoingOrder("Order #004", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
-
-        addOngoingOrder("Order #005", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
-
-        addOngoingOrder("Order #006", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
-
-        addCompletedOrder("Order #003", "Real Laundromat", "Real Address in Davao City, Real St. 123, Building 456",
-                "2 kg",
-                "₱200.00", "10/10/2025");
     }
 
-    public void addOngoingOrder(String id, String shop, String address, String weight, String price, String date) {
-        orderCard card = new orderCard(id, weight, shop, address, price, date);
+    // load all order data ---
+    private void loadOrderData() {
+        if (orderDAO == null || customerDAO == null) {
+            System.err.println("orderspanel: daos not initialized.");
+            return;
+        }
+
+        try {
+            String username = frame.getCurrentUser();
+            if (username == null) {
+                // not logged in
+                ongoingContainer.removeAll();
+                completedContainer.removeAll();
+                ongoingContainer.repaint();
+                completedContainer.repaint();
+                return;
+            }
+
+            // get custid once
+            if (currentCustID == -1) { // only fetch if we don't have it
+                currentCustID = customerDAO.getCustomerId(username);
+            }
+
+            if (currentCustID == -1) {
+                System.err.println("orderspanel: could not find custid for " + username);
+                return;
+            }
+
+            // clear old data
+            ongoingContainer.removeAll();
+            completedContainer.removeAll();
+
+            // define statuses
+            List<String> ongoingStatuses = List.of("pending", "accepted", "in_progress", "ready_for_delivery", "out_for_delivery");
+            List<String> completedStatuses = List.of("completed");
+
+            // fetch ongoing orders
+            Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC");
+            for (Vector<Object> row : ongoingData) {
+                // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
+                addOngoingOrder(
+                        "#" + row.get(0).toString(),
+                        (String) row.get(1), // laundromatname
+                        (String) row.get(2), // laundromataddress
+                        "₱" + row.get(3).toString(),
+                        row.get(4).toString(), // date
+                        (String) row.get(5) // status
+                );
+            }
+
+            // fetch completed orders
+            Vector<Vector<Object>> completedData = orderDAO.getDynamicOrders(currentCustID, completedStatuses, "DESC");
+            for (Vector<Object> row : completedData) {
+                addCompletedOrder(
+                        "#" + row.get(0).toString(),
+                        (String) row.get(1), // laundromatname
+                        (String) row.get(2), // laundromataddress
+                        "₱" + row.get(3).toString(),
+                        row.get(4).toString(), // date
+                        (String) row.get(5) //  status
+                );
+            }
+
+            // refresh ui
+            ongoingContainer.revalidate();
+            ongoingContainer.repaint();
+            completedContainer.revalidate();
+            completedContainer.repaint();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // refresh data when panel is shown
+    @Override
+    public void setVisible(boolean aFlag) {
+        super.setVisible(aFlag);
+        if (aFlag) {
+            // refresh data every time panel is shown
+            loadOrderData();
+        } else {
+            // when panel is hidden, reset custid
+            currentCustID = -1;
+        }
+    }
+
+    // uses new ordercard and passes status
+    public void addOngoingOrder(String id, String shop, String address, String price, String date, String status) {
+        orderCard card = new orderCard(id, shop, address, price, date, status);
         ongoingContainer.add(card);
         ongoingContainer.add(Box.createVerticalStrut(10));
-        ongoingContainer.revalidate();
-        ongoingContainer.repaint();
     }
 
-    public void addCompletedOrder(String id, String shop, String address, String weight, String price, String date) {
-        orderCard card = new orderCard(id, weight, shop, address, price, date);
+    // uses new ordercard and passes status
+    public void addCompletedOrder(String id, String shop, String address, String price, String date, String status) {
+        orderCard card = new orderCard(id, shop, address, price, date, status);
         completedContainer.add(card);
         completedContainer.add(Box.createVerticalStrut(10));
-        completedContainer.revalidate();
-        completedContainer.repaint();
     }
 
     private void showCard(String name) {
@@ -138,7 +209,5 @@ public class Orders extends JPanel {
     @Override
     public void updateUI() {
         super.updateUI();
-        if (myOrderLabel != null) fontManager.applyHeading(myOrderLabel, 3);
-        repaint();
     }
 }

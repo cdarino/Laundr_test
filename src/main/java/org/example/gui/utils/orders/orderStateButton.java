@@ -76,6 +76,11 @@ public class orderStateButton extends roundedPanel {
         updateUI();
     }
 
+    public void doClick() {
+        setActive();
+        action.run();
+    }
+
     private void setActive() {
         if (activeButton != null && activeButton != this) {
             activeButton.setBackground(UIManager.getColor("Sidebarbtn.background"));

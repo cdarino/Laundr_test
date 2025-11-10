@@ -3,6 +3,7 @@ package org.example.gui.panels;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.creators.headerCreator;
 import org.example.gui.utils.sidebar.sidebarFactory;
+import org.example.gui.utils.notifications.NotificationsPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,13 +14,14 @@ public class Landing extends JPanel {
     private sidebarFactory sidebar;
     private CardLayout centerLayout;
     private JPanel centerPanel;
+    private NotificationsPanel notificationsPanel;
 
     public Landing(Mainframe frame) {
         setLayout(new BorderLayout());
         setBackground(UIManager.getColor("Panel.background"));
 
         // pass a callback that toggles the sidebar
-        header = new headerCreator(frame, this::toggleSidebar);
+        header = new headerCreator(frame, this::toggleSidebar, this::toggleNotifications);
         add(header, BorderLayout.NORTH);
 
         centerLayout = new CardLayout();
@@ -31,15 +33,18 @@ public class Landing extends JPanel {
         centerPanel.add(new Laundromats(), "LAUNDROMATS");
         centerPanel.add(new EditProfile(frame, this), "EDIT");
         centerPanel.add(new DigitalWallet(frame, this), "WALLET");
-        centerPanel.add(new ToReceive(this), "RECEIVE");
-        centerPanel.add(new ToRate(this), "RATE");
+        centerPanel.add(new ToReceive(frame, this), "RECEIVE");
+        centerPanel.add(new ToRate(frame, this), "RATE");
         centerPanel.add(new PickupPanel(), "PICKUP");
-        centerPanel.add(new Orders(), "ORDERS");
+        centerPanel.add(new Orders(frame), "ORDERS");
 
         add(centerPanel, BorderLayout.CENTER);
 
         sidebar = new sidebarFactory(this, frame);
         add(sidebar, BorderLayout.WEST);
+
+        notificationsPanel = new NotificationsPanel(frame, this);
+        add(notificationsPanel, BorderLayout.EAST);
 
         centerLayout.show(centerPanel, "DASHBOARD");
     }
@@ -54,6 +59,20 @@ public class Landing extends JPanel {
     public void toggleSidebar() {
         if (sidebar != null) {
             sidebar.toggle();
+            revalidate();
+            repaint();
+        }
+    }
+
+    public void toggleNotifications() {
+        if (notificationsPanel != null) {
+            notificationsPanel.toggle();
+
+            // if we are opening notifications, close the sidebar
+            if (!notificationsPanel.isCollapsed() && sidebar != null && !sidebar.isCollapsed()) {
+                sidebar.setCollapsed(true);
+            }
+
             revalidate();
             repaint();
         }

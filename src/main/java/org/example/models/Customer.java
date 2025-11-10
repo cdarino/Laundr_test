@@ -7,13 +7,15 @@ public class Customer {
     private String phone;
     private String address;
     private String email;
+    private double walletBalance;
 
-    public Customer(String username, String password, String phone, String address, String email) {
+    public Customer(String username, String password, String phone, String address, String email, double walletBalance) {
         this.username = username;
         this.password = password;
         this.phone = phone;
         this.address = address;
         this.email = email;
+        this.walletBalance = 0.0;
     }
 
     public int getCustID() {
@@ -61,5 +63,13 @@ public class Customer {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public double getWalletBalance() {
+        return walletBalance;
+    }
+
+    public void setWalletBalance(double walletBalance) {
+        this.walletBalance = walletBalance;
     }
 }

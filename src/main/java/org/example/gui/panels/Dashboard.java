@@ -1,24 +1,27 @@
 package org.example.gui.panels;
 
-import org.example.database.DBConnect;
 import org.example.gui.Mainframe;
-import org.example.gui.utils.dashboard.recommendations.laundromatsNearUser;
+import org.example.gui.utils.dashboard.recommendations.availableLaundromats;
 import org.example.gui.utils.dashboard.recommendations.recentOrders;
 import org.example.gui.utils.dashboard.welcomeCard;
 
 import javax.swing.*;
 import java.awt.*;
+import javax.swing.Timer;
 
 public class Dashboard extends JPanel {
     private static final int TOP_MARGIN = 40;
     private static final int SIDE_MARGIN = 40;
 
     private welcomeCard welcomeCard;
-    private laundromatsNearUser leftPanel;
+    private availableLaundromats leftPanel;
     private recentOrders rightPanel;
 
-    private JLabel usernameLabel;
     private final Mainframe frame;
+
+    private JPanel mainWrapper;
+
+    private Timer loadTimer;
 
     public Dashboard(Mainframe frame) {
         this.frame = frame;
@@ -30,15 +33,15 @@ public class Dashboard extends JPanel {
     }
 
     private void initializeComponents() {
-        JPanel mainWrapper = new JPanel();
+        mainWrapper = new JPanel();
         mainWrapper.setOpaque(false);
         mainWrapper.setLayout(new BoxLayout(mainWrapper, BoxLayout.Y_AXIS));
         mainWrapper.setBorder(BorderFactory.createEmptyBorder(TOP_MARGIN, SIDE_MARGIN, 40, SIDE_MARGIN));
 
         String username = frame.getCurrentUser();
         welcomeCard = new welcomeCard(username);
-        welcomeCard.setAlignmentX(Component.CENTER_ALIGNMENT);
-        welcomeCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        welcomeCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        welcomeCard.setMinimumSize(new Dimension(Integer.MAX_VALUE, 180));
         mainWrapper.add(welcomeCard);
         mainWrapper.add(Box.createVerticalStrut(20));
 
@@ -46,12 +49,12 @@ public class Dashboard extends JPanel {
         recommendationsPanel.setOpaque(false);
         recommendationsPanel.setLayout(new BoxLayout(recommendationsPanel, BoxLayout.X_AXIS));
 
-        leftPanel = new laundromatsNearUser();
+        leftPanel = new availableLaundromats(frame);
         leftPanel.setPreferredSize(new Dimension(300, 400));
         leftPanel.setMinimumSize(new Dimension(200, 200));
         leftPanel.setMaximumSize(new Dimension(400, Integer.MAX_VALUE));
 
-        rightPanel = new recentOrders();
+        rightPanel = new recentOrders(frame);
         rightPanel.setPreferredSize(new Dimension(600, 400));
         rightPanel.setMinimumSize(new Dimension(200, 200));
         rightPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
@@ -67,14 +70,36 @@ public class Dashboard extends JPanel {
     }
 
     @Override
+    public void setVisible(boolean aFlag) {
+        super.setVisible(aFlag);
+        if (aFlag && rightPanel != null && welcomeCard != null) {
+
+            if (loadTimer != null && loadTimer.isRunning()) {
+                loadTimer.stop();
+            }
+            // attempt to fix recentOrders delayed data display; still not working
+            loadTimer = new Timer(50, (e) -> {
+                // get the user that just logged in
+                String username = frame.getCurrentUser();
+
+                // 1. update the welcome card with the user's name
+                welcomeCard.updateUser(username);
+
+                // 2. tell the recent orders panel to fetch data from the db
+                rightPanel.loadRecentOrders();
+
+            });
+            loadTimer.setRepeats(false);
+            loadTimer.start();
+        }
+    }
+
+    @Override
     public void updateUI() {
         super.updateUI();
         setBackground(UIManager.getColor("background"));
-        if (welcomeCard != null) welcomeCard.updateUI();
-        repaint();
-    }
-
-    public void setUsername(String username) {
-        usernameLabel.setText("Welcome, " + username + "!");
+        if (mainWrapper != null) {
+            mainWrapper.setBackground(UIManager.getColor("background"));
+        }
     }
 }

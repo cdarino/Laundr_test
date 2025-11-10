@@ -1,17 +1,20 @@
 package org.example.gui.utils.orders;
 
-import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.fonts.fontManager;
+import org.example.gui.utils.orders.states.OrderState;
+import org.example.gui.utils.orders.states.OrderStateFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.DecimalFormat;
 
 public class orderCard extends JPanel {
 
-    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, etaLabel;
+    private JLabel orderInfo, laundromatLabel, services, addressLabel, paymentLabel, dateLabel, stateLabel;
+    private static final DecimalFormat df = new DecimalFormat("₱#,##0.00");
 
-    public orderCard(String orderId, String weight, String laundromat,
-                     String address, String price, String date) {
+    public orderCard(String orderId, String laundromat,
+                     String address, String price, String date, String orderStatus) { // <-- changed here
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBackground(UIManager.getColor("background"));
@@ -22,63 +25,84 @@ public class orderCard extends JPanel {
         setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
         setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // left
+        // === LEFT COLUMN ===
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setOpaque(false);
         leftPanel.setAlignmentY(Component.TOP_ALIGNMENT);
 
-        orderInfo = new JLabel("Order " + orderId + " | " + weight);
+        orderInfo = new JLabel("Order " + orderId);
         laundromatLabel = new JLabel(laundromat);
-        services = new JLabel("<html><ul style='margin:0;padding-left:15;'>"
-                + "<li>Wash and Fold</li>"
-                + "<li>Dry Clean</li>"
-                + "</ul></html>");
+        services = new JLabel("<html><ul style='margin:0;padding-left:20px;'>" +
+                "<li>Wash & Fold</li>" +
+                "<li>Dry Cleaning</li>" +
+                "</ul></html>"); // placeholder
 
-        fontManager.applyHeading(orderInfo,7);
+        fontManager.applyHeading(orderInfo, 7);
         fontManager.applyHeading(laundromatLabel, 7);
         fontManager.applyHeading(services, 8);
 
-        // align all labels to left
         orderInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
         laundromatLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         services.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         leftPanel.add(orderInfo);
-        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(laundromatLabel);
         leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(services);
 
-        // middle
+        // === MIDDLE COLUMN ===
         JPanel middlePanel = new JPanel();
         middlePanel.setLayout(new BoxLayout(middlePanel, BoxLayout.Y_AXIS));
         middlePanel.setOpaque(false);
-        middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60)); // adjust spacing between columns
         middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // padding
 
         addressLabel = new JLabel("<html>" + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        etaLabel = new JLabel("<html>" + date + "</html>");
+        dateLabel = new JLabel("<html>" + date + "</html>");
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
-        fontManager.applyHeading(etaLabel, 8);
+        fontManager.applyHeading(dateLabel, 8);
 
         // align labels to the left
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        etaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         middlePanel.add(Box.createVerticalStrut(5));
         middlePanel.add(addressLabel);
         middlePanel.add(Box.createVerticalStrut(10));
         middlePanel.add(paymentLabel);
         middlePanel.add(Box.createVerticalStrut(10));
-        middlePanel.add(etaLabel);
+        middlePanel.add(dateLabel);
 
+        // === RIGHT COLUMN (STATE) ===
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+
+        stateLabel = new JLabel(); // created empty
+        stateLabel.setOpaque(true);
+        stateLabel.setForeground(Color.WHITE); // text is always white
+        stateLabel.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
+        stateLabel.setFont(stateLabel.getFont().deriveFont(Font.BOLD, 11f));
+
+        // --- apply the state pattern ---
+        OrderState state = OrderStateFactory.getState(orderStatus);
+        stateLabel.setText(state.getText());
+        stateLabel.setBackground(state.getColor());
+        // ---
+
+        rightPanel.add(stateLabel);
+
+        // === ADD TO MAIN CARD ===
         add(leftPanel);
+        add(Box.createHorizontalGlue()); // pushes the right panel to the edge
         add(middlePanel);
+        add(Box.createHorizontalGlue());
+        add(rightPanel);
     }
 
     @Override
@@ -92,11 +116,8 @@ public class orderCard extends JPanel {
                 fontManager.applyHeading(services, 8);
                 fontManager.applyHeading(addressLabel, 8);
                 fontManager.applyHeading(paymentLabel, 8);
-                fontManager.applyHeading(etaLabel, 8);
+                fontManager.applyHeading(dateLabel, 8);
             }
-
-            revalidate();
-            repaint();
         });
     }
 }

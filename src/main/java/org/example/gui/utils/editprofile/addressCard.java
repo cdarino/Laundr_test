@@ -1,13 +1,36 @@
 package org.example.gui.utils.editprofile;
 
+import org.example.database.CustomerDAO;
+import org.example.database.DBConnect;
 import org.example.gui.Mainframe;
 import org.example.gui.utils.fonts.fontManager;
+import org.example.models.Customer;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Connection;
 
 public class addressCard extends JPanel {
+
+    private CustomerDAO customerDAO;
+    private Customer currentCustomer;
+    private JTextField tfAddress1;
+    private JButton saveBtn;
+    private final Mainframe frame;
+
     public addressCard(Mainframe frame) {
+        this.frame = frame; // store frame reference
+
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null && !conn.isClosed()) {
+                customerDAO = new CustomerDAO(conn);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error connecting to database.", "DB Error", JOptionPane.ERROR_MESSAGE);
+        }
+
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
         setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -62,55 +85,96 @@ public class addressCard extends JPanel {
         gbc.gridx = 0;
         gbc.weightx = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        JLabel lblAddress1 = new JLabel("Shipping Address 1:");
+        JLabel lblAddress1 = new JLabel("Shipping Address:"); // changed label
         fontManager.applyHeading(lblAddress1, 8);
         lblAddress1.setPreferredSize(new Dimension(labelWidth, 28));
         formPanel.add(lblAddress1, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        JTextField tfAddress1 = new JTextField("123 Main St");
+        tfAddress1 = new JTextField(); // using class field
         tfAddress1.setPreferredSize(new Dimension(txtFieldWidth, txtFieldHeight));
         tfAddress1.setMaximumSize(new Dimension(txtFieldWidth, txtFieldHeight));
         formPanel.add(tfAddress1, gbc);
 
-        // Shipping Address 2
-        gbc.gridy++;
-        gbc.gridx = 0;
-        gbc.weightx = 0;
-        JLabel lblAddress2 = new JLabel("Shipping Address 2:");
-        fontManager.applyHeading(lblAddress2, 8);
-        lblAddress2.setPreferredSize(new Dimension(labelWidth, 28));
-        formPanel.add(lblAddress2, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
-        JTextField tfAddress2 = new JTextField("Unit 4, Building X");
-        tfAddress2.setPreferredSize(new Dimension(txtFieldWidth, txtFieldHeight));
-        tfAddress2.setMaximumSize(new Dimension(txtFieldWidth, txtFieldHeight));
-        formPanel.add(tfAddress2, gbc);
-
         // push button row down a bit
-        gbc.gridy++;
+        gbc.gridy++; // this was gbc.gridy = 3
         gbc.gridx = 0;
         gbc.gridwidth = 2;
-        gbc.weighty = 1.0;
+        gbc.weighty = 1.0; // add weighty to push button to bottom
         gbc.fill = GridBagConstraints.VERTICAL;
         formPanel.add(Box.createVerticalStrut(8), gbc);
 
         // save button aligned to right
-        gbc.gridy++;
+        gbc.gridy++; // this was gbc.gridy = 4
         gbc.gridx = 0;
         gbc.gridwidth = 2;
-        gbc.weighty = 0;
+        gbc.weighty = 0; // reset weighty
         gbc.fill = GridBagConstraints.HORIZONTAL;
         JPanel btnWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         btnWrap.setOpaque(false);
-        JButton saveBtn = new JButton("Save");
+        saveBtn = new JButton("Save"); // using class field
         saveBtn.setPreferredSize(new Dimension(120, 35));
+
+        // --- added save action ---
+        saveBtn.addActionListener(e -> handleSaveAddress());
+
         btnWrap.add(saveBtn);
         formPanel.add(btnWrap, gbc);
 
         add(formPanel);
+
+        // --- load data ---
+        // also, add a listener to refresh data when the panel is shown
+        addAncestorListener(new javax.swing.event.AncestorListener() {
+            public void ancestorAdded(javax.swing.event.AncestorEvent e) {
+                // this is called when the panel is shown
+                loadCustomerData(frame.getCurrentUser());
+            }
+            public void ancestorRemoved(javax.swing.event.AncestorEvent e) {}
+            public void ancestorMoved(javax.swing.event.AncestorEvent e) {}
+        });
+    }
+
+    // load data from db
+    private void loadCustomerData(String username) {
+        if (customerDAO == null) {
+            System.err.println("addresscard: customerdao is null");
+            return;
+        }
+
+        currentCustomer = customerDAO.getCustomerByUsername(username);
+        if (currentCustomer != null) {
+            tfAddress1.setText(currentCustomer.getAddress());
+        } else {
+            // clear field if user not found
+            tfAddress1.setText("");
+            JOptionPane.showMessageDialog(this, "Could not load user data for: " + username, "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // save data to db
+    private void handleSaveAddress() {
+        if (currentCustomer == null || customerDAO == null) {
+            JOptionPane.showMessageDialog(this, "Error: Cannot save data. customer object is null.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String newAddress = tfAddress1.getText().trim();
+
+        try {
+            // we use the username to update the address
+            boolean success = customerDAO.updateAddress(currentCustomer.getUsername(), newAddress);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Address updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                // update local customer object
+                currentCustomer.setAddress(newAddress);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to update address.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error saving address: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
