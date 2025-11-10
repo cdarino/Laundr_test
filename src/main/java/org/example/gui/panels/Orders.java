@@ -1,6 +1,7 @@
 package org.example.gui.panels;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;

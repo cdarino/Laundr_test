@@ -103,7 +103,7 @@ CREATE TABLE review (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Notifications (user-facing notifications)
-CREATE TABLE notifications (
+CREATE TABLE notification (
   notificationID INT AUTO_INCREMENT PRIMARY KEY,
   custID INT NOT NULL,
   message TEXT NOT NULL,
@@ -234,7 +234,7 @@ INSERT INTO review (orderID, laundromatID, custID, rating, comment) VALUES
 (2025, 6, 1025, 4, 'Reliable pickup and drop-off windows. Makes scheduling easier.');
 
 -- (Optional) Insert a few sample notifications (not required but useful for testing)
-INSERT INTO notifications (custID, message) VALUES
+INSERT INTO notification (custID, message) VALUES
 (1001, 'Your order #2001 is ready for pickup.'),
 (1002, 'Thanks for your recent order!');
 

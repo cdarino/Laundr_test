@@ -1,5 +1,7 @@
 package org.example.models;
 
+// dto
+
 public class Customer {
     private int custID;
     private String username;
