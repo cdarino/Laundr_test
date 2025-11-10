@@ -14,6 +14,15 @@ import java.util.List;
 import org.example.gui.utils.orders.orderCard;
 import org.example.gui.utils.orders.orderStateButton;
 
+/**
+ * Original Orders panel design (restored).
+ * Shows toggle buttons (Ongoing / Completed) and switches a CardLayout
+ * between two scrollable containers.
+ *
+ * Data loads:
+ * - whenever setVisible(true) is called (navigation to ORDERS card)
+ * - via the new public refresh() method if you prefer explicit triggering.
+ */
 public class Orders extends JPanel {
     private JPanel cardPanel;
     private CardLayout cardLayout;
@@ -51,13 +60,11 @@ public class Orders extends JPanel {
         orderState.setLayout(new BoxLayout(orderState, BoxLayout.X_AXIS));
         orderState.setOpaque(false);
 
-        ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing")); // use field
-        completedBtn = new orderStateButton("Completed", () -> showCard("completed")); // use field
+        ongoingBtn = new orderStateButton("Ongoing", () -> showCard("ongoing"));
+        completedBtn = new orderStateButton("Completed", () -> showCard("completed"));
 
-        //default pressed set to ongoing
-        SwingUtilities.invokeLater(() -> {
-            ongoingBtn.doClick();
-        });
+        // default pressed set to ongoing
+        SwingUtilities.invokeLater(() -> ongoingBtn.doClick());
 
         orderState.add(Box.createHorizontalStrut(60));
         orderState.add(ongoingBtn);
@@ -90,8 +97,6 @@ public class Orders extends JPanel {
 
         cardPanel.add(ongoingScroll, "ongoing");
         cardPanel.add(completedScroll, "completed");
-
-        // cardLayout.show(cardPanel, "ongoing"); // default is set by doClick()
 
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(0, 60, 0, 60));
@@ -143,11 +148,11 @@ public class Orders extends JPanel {
                 // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
                 addOngoingOrder(
                         "#" + row.get(0).toString(),
-                        (String) row.get(1), // laundromatname
-                        (String) row.get(2), // laundromataddress
+                        (String) row.get(1),
+                        (String) row.get(2),
                         "₱" + row.get(3).toString(),
-                        row.get(4).toString(), // date
-                        (String) row.get(5) // status
+                        row.get(4).toString(),
+                        (String) row.get(5)
                 );
             }
 
@@ -156,13 +161,23 @@ public class Orders extends JPanel {
             for (Vector<Object> row : completedData) {
                 addCompletedOrder(
                         "#" + row.get(0).toString(),
-                        (String) row.get(1), // laundromatname
-                        (String) row.get(2), // laundromataddress
+                        (String) row.get(1),
+                        (String) row.get(2),
                         "₱" + row.get(3).toString(),
-                        row.get(4).toString(), // date
-                        (String) row.get(5) //  status
+                        row.get(4).toString(),
+                        (String) row.get(5)
                 );
             }
+
+            // OPTIONAL: show placeholder if empty (commented to preserve exact original visual behavior)
+            /*
+            if (ongoingData.isEmpty()) {
+                ongoingContainer.add(makePlaceholder("No ongoing orders."));
+            }
+            if (completedData.isEmpty()) {
+                completedContainer.add(makePlaceholder("No completed orders."));
+            }
+            */
 
             // refresh ui
             ongoingContainer.revalidate();
@@ -175,7 +190,12 @@ public class Orders extends JPanel {
         }
     }
 
-    // refresh data when panel is shown
+    // public method to allow explicit refresh calls (added)
+    public void refresh() {
+        // force re-fetch cust id on explicit refresh if needed
+        loadOrderData();
+    }
+
     @Override
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
@@ -183,19 +203,17 @@ public class Orders extends JPanel {
             // refresh data every time panel is shown
             loadOrderData();
         } else {
-            // when panel is hidden, reset custid
+            // when panel is hidden, reset custid so next show re-resolves
             currentCustID = -1;
         }
     }
 
-    // uses new ordercard and passes status
     public void addOngoingOrder(String id, String shop, String address, String price, String date, String status) {
         orderCard card = new orderCard(id, shop, address, price, date, status);
         ongoingContainer.add(card);
         ongoingContainer.add(Box.createVerticalStrut(10));
     }
 
-    // uses new ordercard and passes status
     public void addCompletedOrder(String id, String shop, String address, String price, String date, String status) {
         orderCard card = new orderCard(id, shop, address, price, date, status);
         completedContainer.add(card);
@@ -209,5 +227,15 @@ public class Orders extends JPanel {
     @Override
     public void updateUI() {
         super.updateUI();
+    }
+
+    // Optional placeholder helper (commented out usage to preserve original visuals)
+    private JComponent makePlaceholder(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(UIManager.getFont("Label.font"));
+        lbl.setForeground(UIManager.getColor("Label.disabledForeground"));
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(new EmptyBorder(6, 6, 6, 6));
+        return lbl;
     }
 }
