@@ -9,4 +9,9 @@ public class PressOnlyService implements Service {
 
     @Override
     public String description() { return "Ironing / pressing only"; }
+
+    @Override
+    public String getIconPath() {
+        return "Icons/Services/press.svg";
+    }
 }

@@ -115,12 +115,11 @@ public class ToReceive extends JPanel {
             return;
         }
 
-        // clear old data
         containerPanel.removeAll();
 
         try {
             String username = frame.getCurrentUser();
-            if (username == null) { return; } // not logged in
+            if (username == null) return;
 
             if (currentCustID == -1) {
                 currentCustID = customerDAO.getCustomerId(username);
@@ -131,32 +130,29 @@ public class ToReceive extends JPanel {
                 return;
             }
 
-            // define statuses
-            List<String> ongoingStatuses = List.of("pending", "accepted", "in_progress", "ready_for_delivery", "out_for_delivery");
+            // --- statuses for "To Receive" ---
+            List<String> ongoingStatuses = List.of("pending", "accepted",
+                    "in_progress", "ready_for_delivery", "out_for_delivery");
 
-            // fetch ongoing orders
-            Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC");
+            Vector<Vector<Object>> data = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "DESC");
 
-            if (ongoingData.isEmpty()) {
-                JLabel noOrdersLabel = new JLabel("You have no orders to receive.");
-                fontManager.applyHeading(noOrdersLabel, 7);
-                noOrdersLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                containerPanel.add(noOrdersLabel);
+            if (data.isEmpty()) {
+                System.out.println("No 'to receive' orders found.");
             } else {
-                for (Vector<Object> row : ongoingData) {
-                    // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
+                for (Vector<Object> row : data) {
+                    String services = (row.get(6) != null) ? row.get(6).toString() : "No services listed";
                     addToReceiveCard(
-                            "#" + row.get(0).toString(),
-                            (String) row.get(1), // laundromatname
-                            (String) row.get(2), // laundromataddress
+                            row.get(0).toString(),
+                            (String) row.get(1),
+                            (String) row.get(2),
                             "₱" + row.get(3).toString(),
-                            row.get(4).toString(), // date
-                            (String) row.get(5) // status
+                            row.get(4).toString(),
+                            (String) row.get(5),
+                            services
                     );
                 }
             }
 
-            // refresh ui
             containerPanel.revalidate();
             containerPanel.repaint();
 
@@ -164,6 +160,7 @@ public class ToReceive extends JPanel {
             e.printStackTrace();
         }
     }
+
 
     // --- new method to refresh data when panel is shown ---
     @Override
@@ -179,8 +176,8 @@ public class ToReceive extends JPanel {
     }
 
     // uses new ordercard and passes status
-    public void addToReceiveCard(String id, String shop, String address, String price, String date, String status) {
-        orderCard card = new orderCard(id, shop, address, price, date, status);
+    public void addToReceiveCard(String id, String shop, String address, String price, String date, String status, String servicesList) {
+        orderCard card = new orderCard(id, shop, address, price, date, status, servicesList);
         containerPanel.add(card);
         containerPanel.add(Box.createVerticalStrut(10));
     }

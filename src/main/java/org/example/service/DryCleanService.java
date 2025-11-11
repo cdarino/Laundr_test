@@ -9,4 +9,9 @@ public class DryCleanService implements Service {
 
     @Override
     public String description() { return "Dry cleaning for delicate items"; }
+
+    @Override
+    public String getIconPath() {
+        return "Icons/Services/dryClean.svg";
+    }
 }
