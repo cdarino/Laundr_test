@@ -201,9 +201,7 @@ INSERT INTO service (laundromatID, serviceName, description, basePrice, estimate
 (2, 'Press Only', 'Professional ironing service.', 50.00, 3, 'Icons/Services/pressOnly.svg'),
 (2, 'Bulky Items', 'For comforters, blankets, and large items.', 300.00, 48, 'Icons/Services/bulkyItems.svg'),
 (3, 'Sneakers', 'Deep clean for your shoes.', 200.00, 72, 'Icons/Services/sneakers.svg'),
-(3, 'Pet Items', 'Wash & dry for pet beds and blankets.', 150.00, 24, 'Icons/Services/laundry.svg'),
-(4, 'Wash & Fold', 'Standard wash, dry, and fold service.', 70.00, 24, 'Icons/Services/washFold.svg'),
-(5, 'Dry Clean', 'Special care for delicate items.', 260.00, 48, 'Icons/Services/dryClean.svg');
+(3, 'Pet Items', 'Wash & dry for pet beds and blankets.', 150.00, 24, 'Icons/Services/laundry.svg');
 
 -- Reviews (linked to orders 2001-2025)
 -- Note: The orderIDs are the auto-incremented values from the orders insertion above (2001..).
@@ -254,3 +252,5 @@ JOIN (
 SET l.rating = r.avg_rating;
 
 SET SQL_SAFE_UPDATES = 1;
+
+-- End of merged migration (demo user intentionally removed)
