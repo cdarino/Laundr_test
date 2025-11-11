@@ -2,6 +2,7 @@ package org.example.database;
 
 import java.sql.*;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -178,4 +179,54 @@ public class OrderDAO {
         }
         return -1;
     }
+    public boolean createOrderDetails(int orderId, Map<Integer, Integer> serviceQty) {
+    if (connection == null) {
+        System.err.println("createOrderDetails: No database connection.");
+        return false;
+    }
+    if (serviceQty == null || serviceQty.isEmpty()) return false;
+
+    String sql = "INSERT INTO orderDetails (orderID, serviceID, quantity, subtotal) VALUES (?, ?, ?, ?)";
+    String priceSql = "SELECT basePrice FROM service WHERE serviceID = ? LIMIT 1";
+
+    boolean insertedAny = false;
+    try (PreparedStatement ps = connection.prepareStatement(sql);
+         PreparedStatement pricePs = connection.prepareStatement(priceSql)) {
+
+        for (Map.Entry<Integer, Integer> e : serviceQty.entrySet()) {
+            int serviceId = e.getKey();
+            int qty = e.getValue() <= 0 ? 1 : e.getValue();
+
+            // lookup price
+            double unit = 0.0;
+            pricePs.setInt(1, serviceId);
+            try (ResultSet rs = pricePs.executeQuery()) {
+                if (rs.next()) {
+                    unit = rs.getDouble("basePrice");
+                } else {
+                    // service not found; skip
+                    System.err.println("createOrderDetails: serviceID not found: " + serviceId);
+                    continue;
+                }
+            }
+
+            double subtotal = unit * qty;
+
+            ps.setInt(1, orderId);
+            ps.setInt(2, serviceId);
+            ps.setInt(3, qty);
+            ps.setDouble(4, subtotal);
+            ps.addBatch();
+        }
+
+        int[] results = ps.executeBatch();
+        for (int r : results) {
+            if (r != PreparedStatement.EXECUTE_FAILED) insertedAny = true;
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+
+    return insertedAny;
+}
 }
