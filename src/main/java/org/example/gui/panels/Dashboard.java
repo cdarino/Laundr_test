@@ -7,7 +7,6 @@ import org.example.gui.utils.dashboard.welcomeCard;
 
 import javax.swing.*;
 import java.awt.*;
-import javax.swing.Timer;
 
 public class Dashboard extends JPanel {
     private static final int TOP_MARGIN = 40;
@@ -20,8 +19,6 @@ public class Dashboard extends JPanel {
     private final Mainframe frame;
 
     private JPanel mainWrapper;
-
-    private Timer loadTimer;
 
     public Dashboard(Mainframe frame) {
         this.frame = frame;
@@ -73,24 +70,12 @@ public class Dashboard extends JPanel {
     public void setVisible(boolean aFlag) {
         super.setVisible(aFlag);
         if (aFlag && rightPanel != null && welcomeCard != null) {
-
-            if (loadTimer != null && loadTimer.isRunning()) {
-                loadTimer.stop();
-            }
-            // attempt to fix recentOrders delayed data display; still not working
-            loadTimer = new Timer(50, (e) -> {
-                // get the user that just logged in
+            // Use invokeLater to ensure the UI has completed rendering before fetching orders
+            SwingUtilities.invokeLater(() -> {
                 String username = frame.getCurrentUser();
-
-                // 1. update the welcome card with the user's name
                 welcomeCard.updateUser(username);
-
-                // 2. tell the recent orders panel to fetch data from the db
-                rightPanel.loadRecentOrders();
-
+                rightPanel.loadRecentOrders();  // Load recent orders after the panel is fully visible
             });
-            loadTimer.setRepeats(false);
-            loadTimer.start();
         }
     }
 

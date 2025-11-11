@@ -1,6 +1,7 @@
 package org.example.gui.panels;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
@@ -139,34 +140,46 @@ public class Orders extends JPanel {
             completedContainer.removeAll();
 
             // define statuses
-            List<String> ongoingStatuses = List.of("pending", "accepted", "in_progress", "ready_for_delivery", "out_for_delivery");
+            List<String> ongoingStatuses = List.of("pending", "accepted",
+                    "in_progress", "ready_for_delivery", "out_for_delivery");
             List<String> completedStatuses = List.of("completed");
 
             // fetch ongoing orders
             Vector<Vector<Object>> ongoingData = orderDAO.getDynamicOrders(currentCustID, ongoingStatuses, "ASC");
-            for (Vector<Object> row : ongoingData) {
-                // o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus
-                addOngoingOrder(
-                        "#" + row.get(0).toString(),
-                        (String) row.get(1),
-                        (String) row.get(2),
-                        "₱" + row.get(3).toString(),
-                        row.get(4).toString(),
-                        (String) row.get(5)
-                );
+            if (ongoingData.isEmpty()) {
+                ongoingContainer.add(makePlaceholder("No ongoing orders."));
+            } else {
+                for (Vector<Object> row : ongoingData) {
+                    String services = (row.get(6) != null) ? row.get(6).toString() : "No services listed";
+                    addOngoingOrder(
+                            row.get(0).toString(), // id
+                            (String) row.get(1),   // shop
+                            (String) row.get(2),   // address
+                            "₱" + row.get(3).toString(), // price
+                            row.get(4).toString(), // date
+                            (String) row.get(5),    // status
+                            services //services
+                    );
+                }
             }
 
             // fetch completed orders
             Vector<Vector<Object>> completedData = orderDAO.getDynamicOrders(currentCustID, completedStatuses, "DESC");
-            for (Vector<Object> row : completedData) {
-                addCompletedOrder(
-                        "#" + row.get(0).toString(),
-                        (String) row.get(1),
-                        (String) row.get(2),
-                        "₱" + row.get(3).toString(),
-                        row.get(4).toString(),
-                        (String) row.get(5)
-                );
+            if (completedData.isEmpty()) {
+                completedContainer.add(makePlaceholder("No completed orders."));
+            } else {
+                for (Vector<Object> row : completedData) {
+                    String services = (row.get(6) != null) ? row.get(6).toString() : "No services listed";
+                    addCompletedOrder(
+                            row.get(0).toString(), // id
+                            (String) row.get(1),   // shop
+                            (String) row.get(2),   // address
+                            "₱" + row.get(3).toString(), // price
+                            row.get(4).toString(), // date
+                            (String) row.get(5),    // status
+                            services // services
+                    );
+                }
             }
 
             // OPTIONAL: show placeholder if empty (commented to preserve exact original visual behavior)
@@ -208,14 +221,14 @@ public class Orders extends JPanel {
         }
     }
 
-    public void addOngoingOrder(String id, String shop, String address, String price, String date, String status) {
-        orderCard card = new orderCard(id, shop, address, price, date, status);
+    public void addOngoingOrder(String id, String shop, String address, String price, String date, String status, String servicesList) {
+        orderCard card = new orderCard(id, shop, address, price, date, status, servicesList);
         ongoingContainer.add(card);
         ongoingContainer.add(Box.createVerticalStrut(10));
     }
 
-    public void addCompletedOrder(String id, String shop, String address, String price, String date, String status) {
-        orderCard card = new orderCard(id, shop, address, price, date, status);
+    public void addCompletedOrder(String id, String shop, String address, String price, String date, String status, String servicesList) {
+        orderCard card = new orderCard(id, shop, address, price, date, status, servicesList);
         completedContainer.add(card);
         completedContainer.add(Box.createVerticalStrut(10));
     }

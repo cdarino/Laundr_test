@@ -9,4 +9,9 @@ public class WashAndFoldService implements Service {
 
     @Override
     public String description() { return "Standard wash, dry, fold"; }
+
+    @Override
+    public String getIconPath() {
+        return "Icons/Services/washandFold.svg";
+    }
 }

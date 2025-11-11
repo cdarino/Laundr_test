@@ -14,7 +14,7 @@ public class orderCard extends JPanel {
     private static final DecimalFormat df = new DecimalFormat("₱#,##0.00");
 
     public orderCard(String orderId, String laundromat,
-                     String address, String price, String date, String orderStatus) { // <-- changed here
+                     String address, String price, String date, String orderStatus, String servicesList) {
 
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setBackground(UIManager.getColor("background"));
@@ -33,11 +33,13 @@ public class orderCard extends JPanel {
 
         orderInfo = new JLabel("Order " + orderId);
         laundromatLabel = new JLabel(laundromat);
-        services = new JLabel("<html><ul style='margin:0;padding-left:20px;'>" +
+        String serviceText = (servicesList != null && !servicesList.isEmpty()) ? servicesList : "No services listed";
+        services = new JLabel(serviceText);
+        /* services = new JLabel("<html><ul style='margin:0;padding-left:20px;'>" +
                 "<li>Wash & Fold</li>" +
                 "<li>Dry Cleaning</li>" +
                 "</ul></html>"); // placeholder
-
+        */
         fontManager.applyHeading(orderInfo, 7);
         fontManager.applyHeading(laundromatLabel, 7);
         fontManager.applyHeading(services, 8);
@@ -47,8 +49,9 @@ public class orderCard extends JPanel {
         services.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         leftPanel.add(orderInfo);
+        leftPanel.add(Box.createVerticalStrut(4));
         leftPanel.add(laundromatLabel);
-        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(Box.createVerticalStrut(4));
         leftPanel.add(services);
 
         // === MIDDLE COLUMN ===
@@ -58,9 +61,9 @@ public class orderCard extends JPanel {
         middlePanel.setAlignmentY(Component.TOP_ALIGNMENT);
         middlePanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // padding
 
-        addressLabel = new JLabel("<html>" + address + "</html>");
+        addressLabel = new JLabel("<html>Delivered at: " + address + "</html>");
         paymentLabel = new JLabel("<html>" + price + "</html>");
-        dateLabel = new JLabel("<html>" + date + "</html>");
+        dateLabel = new JLabel("<html> Order Placed: " + date + "</html>");
 
         fontManager.applyHeading(addressLabel, 8);
         fontManager.applyHeading(paymentLabel, 8);
@@ -93,16 +96,18 @@ public class orderCard extends JPanel {
         OrderState state = OrderStateFactory.getState(orderStatus);
         stateLabel.setText(state.getText());
         stateLabel.setBackground(state.getColor());
-        // ---
 
         rightPanel.add(stateLabel);
 
         // === ADD TO MAIN CARD ===
+        add(Box.createHorizontalStrut(10));
         add(leftPanel);
         add(Box.createHorizontalGlue()); // pushes the right panel to the edge
+        add(Box.createHorizontalStrut(200));
         add(middlePanel);
         add(Box.createHorizontalGlue());
         add(rightPanel);
+        add(Box.createHorizontalStrut(10));
     }
 
     @Override

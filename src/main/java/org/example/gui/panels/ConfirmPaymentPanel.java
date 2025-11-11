@@ -6,6 +6,7 @@ import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.fonts.fontLoader;
 import org.example.gui.utils.fonts.fontManager;
+import org.example.session.AppState;
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
 import org.example.database.OrderDAO;
@@ -16,6 +17,12 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+import org.example.session.AppState;
+import org.example.database.DBConnect;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
@@ -507,18 +514,30 @@ public class ConfirmPaymentPanel extends JPanel {
             }
 
             // Pick a laundromatID — if you track selection elsewhere, replace this lookup.
-            int laundromatID = 0;
-            try (Statement st = conn.createStatement();
+            // prefer selected laundromat from AppState
+int laundromatID = AppState.selectedLaundromatID;
+
+// if not set, fallback to previous approach: pick the first laundromat in the DB
+if (laundromatID <= 0) {
+    try (Connection c = DBConnect.getConnection()) {
+        if (c != null && !c.isClosed()) {
+            try (Statement st = c.createStatement();
                  ResultSet rs = st.executeQuery("SELECT laundromatID FROM laundromat ORDER BY laundromatID LIMIT 1")) {
                 if (rs.next()) laundromatID = rs.getInt(1);
             }
-            if (laundromatID <= 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No laundromat available to accept the order.",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
+        }
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+}
+
+if (laundromatID <= 0) {
+    JOptionPane.showMessageDialog(this,
+            "No laundromat selected and none available in the database.",
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+    return false;
+}
 
             // Compute a simple total from the quantity text (keeps your UI unchanged)
             double total = 0.0;

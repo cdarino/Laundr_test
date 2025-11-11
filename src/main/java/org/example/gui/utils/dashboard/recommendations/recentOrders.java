@@ -28,6 +28,7 @@ public class recentOrders extends roundedPanel {
 
         initializeDAOs();
         initComponents();
+        loadRecentOrders();
     }
 
     /**
@@ -105,7 +106,6 @@ public class recentOrders extends roundedPanel {
     // fetch 3 recent orders
     public void loadRecentOrders() {
         if (orderDAO == null || customerDAO == null) {
-            System.err.println("recentOrders: DAOs not initialized. Cannot load orders.");
             return;
         }
 
@@ -155,6 +155,7 @@ public class recentOrders extends roundedPanel {
         }
     }
 
+
     @Override
     public void updateUI() {
         super.updateUI();
@@ -172,5 +173,6 @@ public class recentOrders extends roundedPanel {
             table.getTableHeader().setBackground(UIManager.getColor("background"));
             table.getTableHeader().setForeground(UIManager.getColor("Label.foreground"));
         }
+        loadRecentOrders();
     }
 }

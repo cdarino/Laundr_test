@@ -8,6 +8,7 @@ public class DBConnect {
     private static final String url = "jdbc:mysql://localhost:3306/laundr";
     private static final String user = "root";
     private static final String pw = "12345";
+    // private static final String pw = "12345";
 
     private static Connection connection = null;
 

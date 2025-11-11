@@ -13,6 +13,12 @@ import org.example.gui.utils.creators.roundedBorder;
 import org.example.gui.utils.creators.roundedPanel;
 import org.example.gui.utils.creators.buttonCreator;
 
+import org.example.session.AppState;
+import org.example.database.DBConnect;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
 public class LaundromatDetailsPanel extends JPanel {
 
     // Header sizing
@@ -609,6 +615,41 @@ public class LaundromatDetailsPanel extends JPanel {
 
         revalidate();
         repaint();
+        try {
+    Connection conn = DBConnect.getConnection();
+    if (conn != null && !conn.isClosed()) {
+        // Use both name and address to find the exact laundromat row (safer)
+        String q = "SELECT laundromatID FROM laundromat WHERE laundromatName = ? AND laundromatAddress = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(q)) {
+            ps.setString(1, data.name != null ? data.name.trim() : "");
+            ps.setString(2, data.address != null ? data.address.trim() : "");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int id = rs.getInt("laundromatID");
+                    AppState.setSelectedLaundromat(id, data.name);
+                } else {
+                    // fallback: if exact name+address not found, try match by name only
+                    String q2 = "SELECT laundromatID FROM laundromat WHERE laundromatName = ? LIMIT 1";
+                    try (PreparedStatement ps2 = conn.prepareStatement(q2)) {
+                        ps2.setString(1, data.name != null ? data.name.trim() : "");
+                        try (ResultSet rs2 = ps2.executeQuery()) {
+                            if (rs2.next()) {
+                                AppState.setSelectedLaundromat(rs2.getInt("laundromatID"), data.name);
+                            } else {
+                                AppState.clearSelectedLaundromat();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // no DB connection -> do not change AppState
+    }
+} catch (Exception ex) {
+    ex.printStackTrace();
+    AppState.clearSelectedLaundromat();
+}
     }
 
     private double getRatingFor(LaundromatData data) {

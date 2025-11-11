@@ -1,12 +1,12 @@
 package org.example.gui.panels;
 
+import org.example.gui.laundromats.ServiceCard;
 import org.example.gui.utils.creators.roundedPanel;
 import org.example.gui.utils.creators.roundedBorder;
 import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.fonts.fontLoader;
 import org.example.gui.utils.fonts.fontManager;
-import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
 import com.formdev.flatlaf.FlatLaf;
 
@@ -22,6 +22,12 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+
+import java.sql.SQLException;
+
+import org.example.database.ServiceDAO;
+import org.example.service.Service;
+import org.example.service.ServiceFactory;
 
 public class PickupPanel extends JPanel {
     private static final Color FIXED_BACKGROUND = new Color(245, 245, 245);
@@ -127,38 +133,55 @@ public class PickupPanel extends JPanel {
         mainContainer.revalidate();
         mainContainer.repaint();
     }
-    
+
     private roundedPanel createServicesSection() {
         JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
         outerContainer.setOpaque(true);
-        
+
         serviceTitleLabel = new JLabel("Select Services");
         serviceTitleLabel.setFont(fontManager.h2());
         serviceTitleLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
         outerContainer.add(serviceTitleLabel, BorderLayout.NORTH);
-        
+
+        // main section panel
         roundedPanel section = new roundedPanel(18);
         section.setLayout(new BorderLayout(10, 10));
         section.setBorder(BorderFactory.createCompoundBorder(
-            new roundedBorder(18, getAccentBorderColor(), 2),
-            new EmptyBorder(15, 15, 15, 15)
+                new roundedBorder(18, getAccentBorderColor(), 2),
+                new EmptyBorder(15, 15, 15, 15)
         ));
-        
+
+        // Grid panel for service buttons
         servicesPanel = new JPanel(new GridLayout(0, 2, 15, 15));
         servicesPanel.setOpaque(true);
-        
-        String[][] services = {
-            {"Dry Clean", "Icons/Services/dryClean.svg"},
-            {"Laundry", "Icons/Services/washandFold.svg"},
-            {"Iron", "Icons/Services/iron.svg"}
-        };
-        
-        for (String[] svc : services) {
-            ServiceButton btn = new ServiceButton(svc[0], svc[1]);
-            servicesPanel.add(btn);
-            serviceButtons.add(btn);
+
+        // --- Fetch services dynamically from the database ---
+        List<Service> services = new ArrayList<>();
+        Connection conn = DBConnect.getConnection(); // DO NOT close this connection
+        if (conn != null) {
+            try {
+                ServiceDAO serviceDAO = new ServiceDAO(conn);
+                services = serviceDAO.getAllServices();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
-        
+
+        /*if (services.isEmpty()) {
+            System.out.println("No services found in DB, loading defaults...");
+            services = List.of(
+                    ServiceFactory.create("washandfold"),
+                    ServiceFactory.create("dryclean"),
+                    ServiceFactory.create("pressonly")
+            );
+        }*/
+
+        for (Service s : services) {
+            ServiceButton card = new ServiceButton(s.getName(), s.getIconPath());
+            servicesPanel.add(card);
+        }
+
+        // Scroll pane for services
         JScrollPane scrollPane = new JScrollPane(servicesPanel);
         scrollPane.setOpaque(true);
         scrollPane.getViewport().setOpaque(true);
@@ -166,17 +189,18 @@ public class PickupPanel extends JPanel {
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         section.add(scrollPane, BorderLayout.CENTER);
-        
+
         outerContainer.add(section, BorderLayout.CENTER);
-        
+
+        // Wrapper panel
         roundedPanel wrapper = new roundedPanel(0);
         wrapper.setLayout(new BorderLayout());
         wrapper.setOpaque(true);
         wrapper.add(outerContainer, BorderLayout.CENTER);
-        
+
         return wrapper;
     }
-    
+
     private roundedPanel createDetailsSection() {
         JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
         outerContainer.setOpaque(true);

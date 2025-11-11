@@ -63,9 +63,20 @@ public class OrderDAO {
             }
         }
 
-        String query = "SELECT o.orderID, l.laundromatName, l.laundromatAddress, o.totalAmount, o.orderDate, o.orderStatus " +
+        String query = "SELECT " +
+                "o.orderID, " +
+                "l.laundromatName, " +
+                "c.custAddress, " +
+                "o.totalAmount, " +
+                "o.orderDate, " +
+                "o.orderStatus, " +
+                "(SELECT GROUP_CONCAT(s.serviceName SEPARATOR ', ') " +
+                " FROM orderDetails od " +
+                " JOIN service s ON od.serviceID = s.serviceID " +
+                " WHERE od.orderID = o.orderID) AS servicesList " +
                 "FROM orders o " +
                 "JOIN laundromat l ON o.laundromatID = l.laundromatID " +
+                "JOIN customer c ON o.custID = c.custID " +
                 "WHERE o.custID = " + custID + " " +
                 "AND o.orderStatus IN (" + statusListString + ") " +
                 "ORDER BY o.orderDate " + sortOrder;
@@ -77,10 +88,11 @@ public class OrderDAO {
                 Vector<Object> row = new Vector<>();
                 row.add(rs.getInt("orderID"));
                 row.add(rs.getString("laundromatName"));
-                row.add(rs.getString("laundromatAddress"));
+                row.add(rs.getString("custAddress"));
                 row.add(rs.getBigDecimal("totalAmount"));
                 row.add(rs.getTimestamp("orderDate").toString());
                 row.add(rs.getString("orderStatus"));
+                row.add(rs.getString("servicesList"));
                 data.add(row);
             }
         } catch (SQLException e) {
