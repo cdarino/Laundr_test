@@ -29,15 +29,17 @@ CREATE TABLE customer (
 
 -- Laundromats
 CREATE TABLE laundromat (
-  laundromatID INT AUTO_INCREMENT PRIMARY KEY,
-  laundromatName VARCHAR(150) NOT NULL,
+  laundromatID     INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  laundromatName   VARCHAR(150) NOT NULL,
   laundromatAddress VARCHAR(255) NOT NULL,
-  rating DECIMAL(3,2) DEFAULT 0.00,
-  imagePath VARCHAR(255) DEFAULT 'Pictures/default.png',
-  distanceFromUser VARCHAR(50) DEFAULT 'N/A',
-  estimatedTime VARCHAR(50) DEFAULT 'N/A',
-  highlights TEXT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  rating           DECIMAL(3,2) DEFAULT 0.00,
+  imagePath        VARCHAR(255) DEFAULT 'Pictures/default.png',
+  distanceFromUser VARCHAR(50)  DEFAULT 'N/A',
+  estimatedTime    VARCHAR(50)  DEFAULT 'N/A',
+  highlights       TEXT,
+  pricePerLoad     DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  INDEX idx_name (laundromatName)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Services offered by laundromats
 CREATE TABLE service (
@@ -196,12 +198,12 @@ INSERT INTO orders (custID, laundromatID, orderStatus, totalAmount) VALUES
 
 -- Services (sample)
 INSERT INTO service (laundromatID, serviceName, description, basePrice, estimatedTime, iconPath) VALUES
-(1, 'Wash & Fold', 'Standard wash, dry, and fold service.', 65.00, 24, 'Icons/Services/washandFold.svg'),
-(1, 'Dry Clean', 'Special care for delicate items.', 250.00, 48, 'Icons/Services/dryClean.svg'),
-(2, 'Press Only', 'Professional ironing service.', 50.00, 3, 'Icons/Services/pressOnly.svg'),
-(2, 'Bulky Items', 'For comforters, blankets, and large items.', 300.00, 48, 'Icons/Services/bulkyItems.svg'),
-(3, 'Sneakers', 'Deep clean for your shoes.', 200.00, 72, 'Icons/Services/sneakers.svg'),
-(3, 'Pet Items', 'Wash & dry for pet beds and blankets.', 150.00, 24, 'Icons/Services/laundry.svg');
+(1, 'Wash & Fold', 'Standard wash, dry, and fold service.', 170.00, 24, 'Icons/Services/washandFold.svg'),
+(1, 'Dry Clean', 'Special care for delicate items.', 350.00, 48, 'Icons/Services/dryClean.svg'),
+(2, 'Iron', 'Professional ironing service.', 60.00, 3, 'Icons/Services/Iron.svg'),
+(2, 'Hand Wash', 'For tough stains.', 120.00, 48, 'Icons/Services/handWash.svg'),
+(3, 'Sneakers', 'Deep clean for your shoes.', 250.00, 72, 'Icons/Services/sneakers.svg'),
+(3, 'Bulky Items', 'For comforters, blankets, and large items.', 450.00, 48, 'Icons/Services/bulkyItems.svg');
 
 -- Reviews (linked to orders 2001-2025)
 -- Note: The orderIDs are the auto-incremented values from the orders insertion above (2001..).

@@ -72,7 +72,7 @@ public class AdminDAO {
             throw new SQLException("Cannot fetch laundromats — no database connection.");
         }
         String query = "SELECT laundromatID, laundromatName, laundromatAddress, rating, " +
-                "imagePath, distanceFromUser, estimatedTime, highlights FROM laundromat";
+        "imagePath, distanceFromUser, estimatedTime, pricePerLoad, highlights FROM laundromat";
 
         Vector<Vector<Object>> data = new Vector<>();
 
@@ -88,6 +88,7 @@ public class AdminDAO {
                 row.add(rs.getString("imagePath"));
                 row.add(rs.getString("distanceFromUser"));
                 row.add(rs.getString("estimatedTime"));
+                row.add(rs.getBigDecimal("pricePerLoad")); // or rs.getDouble("pricePerLoad")
                 row.add(rs.getString("highlights"));
                 data.add(row);
             }
@@ -127,63 +128,67 @@ public class AdminDAO {
     /**
      * Adds a new laundromat to the database. Used by AdminView.java.
      */
-    public boolean addLaundromat(String name, String address, String imagePath, String distance, String estTime, String highlights) throws SQLException {
-        if (connection == null) {
-            throw new SQLException("Cannot add laundromat — no database connection.");
-        }
-
-        // Simple sanitation
-        name = name.isEmpty() ? "NULL" : "'" + name.replace("'", "''") + "'";
-        address = address.isEmpty() ? "NULL" : "'" + address.replace("'", "''") + "'";
-        imagePath = imagePath.isEmpty() ? "'Pictures/default.png'" : "'" + imagePath.replace("'", "''") + "'";
-        distance = distance.isEmpty() ? "'N/A'" : "'" + distance.replace("'", "''") + "'";
-        estTime = estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
-        highlights = highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
-
-        String query = "INSERT INTO laundromat (laundromatName, laundromatAddress, imagePath, distanceFromUser, estimatedTime, highlights) VALUES ("
-                + name + ", "
-                + address + ", "
-                + imagePath + ", "
-                + distance + ", "
-                + estTime + ", "
-                + highlights + ")";
-
-        try (Statement st = connection.createStatement()) {
-            int rowsAffected = st.executeUpdate(query);
-            return rowsAffected > 0;
-        }
+    public boolean addLaundromat(String name, String address, String imagePath, String distance, String estTime, String highlights, double pricePerLoad) throws SQLException {
+    if (connection == null) {
+        throw new SQLException("Cannot add laundromat — no database connection.");
     }
+
+    // Simple sanitation for string inputs
+    name = name == null || name.isEmpty() ? "NULL" : "'" + name.replace("'", "''") + "'";
+    address = address == null || address.isEmpty() ? "NULL" : "'" + address.replace("'", "''") + "'";
+    imagePath = imagePath == null || imagePath.isEmpty() ? "'Pictures/default.png'" : "'" + imagePath.replace("'", "''") + "'";
+    distance = distance == null || distance.isEmpty() ? "'N/A'" : "'" + distance.replace("'", "''") + "'";
+    estTime = estTime == null || estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
+    highlights = highlights == null || highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
+    String priceExpr = String.format("%.2f", pricePerLoad);
+
+    String query = "INSERT INTO laundromat (laundromatName, laundromatAddress, imagePath, distanceFromUser, estimatedTime, highlights, pricePerLoad) VALUES ("
+            + name + ", "
+            + address + ", "
+            + imagePath + ", "
+            + distance + ", "
+            + estTime + ", "
+            + highlights + ", "
+            + priceExpr + ")";
+
+    try (Statement st = connection.createStatement()) {
+        int rowsAffected = st.executeUpdate(query);
+        return rowsAffected > 0;
+    }
+}
 
     /**
      * Updates an existing laundromat in the database.
      */
-    public boolean updateLaundromat(int laundromatID, String name, String address, String imagePath, String distance, String estTime, String highlights) throws SQLException {
-        if (connection == null) {
-            throw new SQLException("Cannot update laundromat — no database connection.");
-        }
-
-        // Simple sanitation
-        name = name.isEmpty() ? "NULL" : "'" + name.replace("'", "''") + "'";
-        address = address.isEmpty() ? "NULL" : "'" + address.replace("'", "''") + "'";
-        imagePath = imagePath.isEmpty() ? "'Pictures/default.png'" : "'" + imagePath.replace("'", "''") + "'";
-        distance = distance.isEmpty() ? "'N/A'" : "'" + distance.replace("'", "''") + "'";
-        estTime = estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
-        highlights = highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
-
-        String query = "UPDATE laundromat SET " +
-                "laundromatName = " + name + ", " +
-                "laundromatAddress = " + address + ", " +
-                "imagePath = " + imagePath + ", " +
-                "distanceFromUser = " + distance + ", " +
-                "estimatedTime = " + estTime + ", " +
-                "highlights = " + highlights + " " +
-                "WHERE laundromatID = " + laundromatID;
-
-        try (Statement st = connection.createStatement()) {
-            int rowsAffected = st.executeUpdate(query);
-            return rowsAffected > 0;
-        }
+    public boolean updateLaundromat(int laundromatID, String name, String address, String imagePath, String distance, String estTime, String highlights, double pricePerLoad) throws SQLException {
+    if (connection == null) {
+        throw new SQLException("Cannot update laundromat — no database connection.");
     }
+
+    // Simple sanitation for string inputs
+    name = name == null || name.isEmpty() ? "NULL" : "'" + name.replace("'", "''") + "'";
+    address = address == null || address.isEmpty() ? "NULL" : "'" + address.replace("'", "''") + "'";
+    imagePath = imagePath == null || imagePath.isEmpty() ? "'Pictures/default.png'" : "'" + imagePath.replace("'", "''") + "'";
+    distance = distance == null || distance.isEmpty() ? "'N/A'" : "'" + distance.replace("'", "''") + "'";
+    estTime = estTime == null || estTime.isEmpty() ? "'N/A'" : "'" + estTime.replace("'", "''") + "'";
+    highlights = highlights == null || highlights.isEmpty() ? "NULL" : "'" + highlights.replace("'", "''") + "'";
+    String priceExpr = String.format("%.2f", pricePerLoad);
+
+    String query = "UPDATE laundromat SET " +
+            "laundromatName = " + name + ", " +
+            "laundromatAddress = " + address + ", " +
+            "imagePath = " + imagePath + ", " +
+            "distanceFromUser = " + distance + ", " +
+            "estimatedTime = " + estTime + ", " +
+            "highlights = " + highlights + ", " +
+            "pricePerLoad = " + priceExpr + " " +
+            "WHERE laundromatID = " + laundromatID;
+
+    try (Statement st = connection.createStatement()) {
+        int rowsAffected = st.executeUpdate(query);
+        return rowsAffected > 0;
+    }
+}
     // find the custid for a given orderid.
     //     * needed by updateorderstatus to create a notification.
     private int getCustIDForOrder(int orderID) throws SQLException {

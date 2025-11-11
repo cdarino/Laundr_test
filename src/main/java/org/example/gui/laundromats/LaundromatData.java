@@ -11,6 +11,8 @@ public class LaundromatData {
     public int stars;
     public String description;
     public String imagePath;
+    public String highlights;    // NEW: highlights text stored in DB (semicolon/comma separated)
+    public double pricePerLoad;  // NEW: price per load
 
     /**
      * Full constructor.
@@ -21,7 +23,9 @@ public class LaundromatData {
                           String deliveryPeriod,
                           int stars,
                           String description,
-                          String imagePath) {
+                          String imagePath,
+                          String highlights,
+                          double pricePerLoad) {
         this.name = name;
         this.address = address;
         this.distance = distance;
@@ -29,16 +33,18 @@ public class LaundromatData {
         this.stars = stars;
         this.description = description;
         this.imagePath = imagePath;
+        this.highlights = highlights;
+        this.pricePerLoad = pricePerLoad;
     }
 
     /**
-     * Convenience constructor used by the samples (no stars/description).
+     * Convenience constructor used by the samples (no stars/description/price/highlights).
      */
     public LaundromatData(String name,
                           String address,
                           String distance,
                           String deliveryPeriod,
                           String imagePath) {
-        this(name, address, distance, deliveryPeriod, 0, "", imagePath);
+        this(name, address, distance, deliveryPeriod, 0, "", imagePath, null, 0.0);
     }
 }

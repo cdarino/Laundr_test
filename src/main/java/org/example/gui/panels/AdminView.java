@@ -28,7 +28,7 @@ public class AdminView extends JPanel {
     // Laundromat Tab
     private JTable laundromatsTable;
     private DefaultTableModel laundromatsTableModel;
-    private JTextField laundromatNameField, laundromatAddressField, laundromatImageField, laundromatDistanceField, laundromatEstTimeField, laundromatHighlightsField;
+    private JTextField laundromatNameField, laundromatAddressField, laundromatImageField, laundromatDistanceField, laundromatEstTimeField, laundromatHighlightsField, laundromatPriceField;
     private JButton addLaundromatButton, updateLaundromatButton, clearLaundromatButton;
     private int selectedLaundromatId = -1; // To store the ID of the selected row
 
@@ -175,110 +175,144 @@ public class AdminView extends JPanel {
     }
 
     private JPanel createLaundromatPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    JPanel panel = new JPanel(new BorderLayout(10, 10));
+    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // laundromat table
-        laundromatsTableModel = new DefaultTableModel(new String[]{"ID", "Name", "Address", "Rating", "Image", "Distance", "Est. Time", "Highlights"}, 0);
-        laundromatsTable = new JTable(laundromatsTableModel);
-        laundromatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    // laundromat table (note: Price column added before Highlights)
+    laundromatsTableModel = new DefaultTableModel(
+            new String[]{"ID", "Name", "Address", "Rating", "Image", "Distance", "Est. Time", "Price", "Highlights"}, 0);
+    laundromatsTable = new JTable(laundromatsTableModel);
+    laundromatsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        laundromatsTable.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                int selectedRow = laundromatsTable.getSelectedRow();
-                if (selectedRow != -1) {
-                    TableModel model = laundromatsTable.getModel();
+    laundromatsTable.getSelectionModel().addListSelectionListener(e -> {
+        if (!e.getValueIsAdjusting()) {
+            int selectedRow = laundromatsTable.getSelectedRow();
+            if (selectedRow != -1) {
+                TableModel model = laundromatsTable.getModel();
+                try {
                     selectedLaundromatId = (int) model.getValueAt(selectedRow, 0); // Store the ID
-                    laundromatNameField.setText(model.getValueAt(selectedRow, 1).toString());
-                    laundromatAddressField.setText(model.getValueAt(selectedRow, 2).toString());
-                    laundromatImageField.setText(model.getValueAt(selectedRow, 4).toString());
-                    laundromatDistanceField.setText(model.getValueAt(selectedRow, 5).toString());
-                    laundromatEstTimeField.setText(model.getValueAt(selectedRow, 6).toString());
-                    laundromatHighlightsField.setText(model.getValueAt(selectedRow, 7).toString());
-
-                    updateLaundromatButton.setEnabled(true); // Enable update
+                } catch (ClassCastException ex) {
+                    // some table models may return Number types — coerce safely
+                    Object idObj = model.getValueAt(selectedRow, 0);
+                    selectedLaundromatId = idObj instanceof Number ? ((Number) idObj).intValue() : -1;
                 }
+
+                // Populate form fields (column indexes match header above)
+                Object nameObj = model.getValueAt(selectedRow, 1);
+                laundromatNameField.setText(nameObj != null ? nameObj.toString() : "");
+
+                Object addrObj = model.getValueAt(selectedRow, 2);
+                laundromatAddressField.setText(addrObj != null ? addrObj.toString() : "");
+
+                Object imageObj = model.getValueAt(selectedRow, 4);
+                laundromatImageField.setText(imageObj != null ? imageObj.toString() : "Pictures/default.png");
+
+                Object distObj = model.getValueAt(selectedRow, 5);
+                laundromatDistanceField.setText(distObj != null ? distObj.toString() : "N/A");
+
+                Object estObj = model.getValueAt(selectedRow, 6);
+                laundromatEstTimeField.setText(estObj != null ? estObj.toString() : "N/A");
+
+                // Price may be BigDecimal/Double/Number
+                Object priceObj = model.getValueAt(selectedRow, 7);
+                if (priceObj == null) laundromatPriceField.setText("0.00");
+                else if (priceObj instanceof Number) laundromatPriceField.setText(String.format("%.2f", ((Number) priceObj).doubleValue()));
+                else laundromatPriceField.setText(priceObj.toString());
+
+                Object highlightsObj = model.getValueAt(selectedRow, 8);
+                laundromatHighlightsField.setText(highlightsObj != null ? highlightsObj.toString() : "");
+
+                updateLaundromatButton.setEnabled(true); // Enable update
             }
-        });
+        }
+    });
 
-        JScrollPane tableScrollPane = new JScrollPane(laundromatsTable);
-        tableScrollPane.setBorder(BorderFactory.createTitledBorder("Laundromats"));
-        panel.add(tableScrollPane, BorderLayout.CENTER);
+    JScrollPane tableScrollPane = new JScrollPane(laundromatsTable);
+    tableScrollPane.setBorder(BorderFactory.createTitledBorder("Laundromats"));
+    panel.add(tableScrollPane, BorderLayout.CENTER);
 
-        // --- Form for Adding/Updating Laundromats ---
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBorder(BorderFactory.createTitledBorder("Add / Update Laundromat"));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    // --- Form for Adding/Updating Laundromats ---
+    JPanel formPanel = new JPanel(new GridBagLayout());
+    formPanel.setBorder(BorderFactory.createTitledBorder("Add / Update Laundromat"));
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(5, 5, 5, 5);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Row 0: Name
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Name:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatNameField = new JTextField(20);
-        formPanel.add(laundromatNameField, gbc);
+    // Row 0: Name
+    gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Name:"), gbc);
+    gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatNameField = new JTextField(20);
+    formPanel.add(laundromatNameField, gbc);
 
-        // Row 1: Address
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Address:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatAddressField = new JTextField(20);
-        formPanel.add(laundromatAddressField, gbc);
+    // Row 1: Address
+    gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Address:"), gbc);
+    gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatAddressField = new JTextField(20);
+    formPanel.add(laundromatAddressField, gbc);
 
-        // Row 2: Image Path
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Image Path:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatImageField = new JTextField(20);
-        laundromatImageField.setText("Pictures/default.png"); // Example default
-        formPanel.add(laundromatImageField, gbc);
+    // Row 2: Image Path
+    gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Image Path:"), gbc);
+    gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatImageField = new JTextField(20);
+    laundromatImageField.setText("Pictures/default.png"); // Example default
+    formPanel.add(laundromatImageField, gbc);
 
-        // Row 3: Distance
-        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Distance:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 3; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatDistanceField = new JTextField(20);
-        laundromatDistanceField.setText("N/A"); // Example default
-        formPanel.add(laundromatDistanceField, gbc);
+    // Row 3: Distance
+    gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Distance:"), gbc);
+    gbc.gridx = 1; gbc.gridy = 3; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatDistanceField = new JTextField(20);
+    laundromatDistanceField.setText("N/A"); // Example default
+    formPanel.add(laundromatDistanceField, gbc);
 
-        // Row 4: Est. Time
-        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Est. Time:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 4; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatEstTimeField = new JTextField(20);
-        laundromatEstTimeField.setText("N/A"); // Example default
-        formPanel.add(laundromatEstTimeField, gbc);
+    // Row 4: Est. Time
+    gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Est. Time:"), gbc);
+    gbc.gridx = 1; gbc.gridy = 4; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatEstTimeField = new JTextField(20);
+    laundromatEstTimeField.setText("N/A"); // Example default
+    formPanel.add(laundromatEstTimeField, gbc);
 
-        // Row 5: Highlights
-        gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
-        formPanel.add(new JLabel("Highlights (comma-separated):"), gbc);
-        gbc.gridx = 1; gbc.gridy = 5; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
-        laundromatHighlightsField = new JTextField(20);
-        laundromatHighlightsField.setText("Standard Wash & Fold"); // Example default
-        formPanel.add(laundromatHighlightsField, gbc);
+    // Row 5: Price per load
+    gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Price per load (₱):"), gbc);
+    gbc.gridx = 1; gbc.gridy = 5; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatPriceField = new JTextField(10);
+    laundromatPriceField.setText("0.00");
+    formPanel.add(laundromatPriceField, gbc);
 
-        // Row 6: Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        addLaundromatButton = new JButton("Add New");
-        addLaundromatButton.addActionListener(e -> addLaundromat());
-        buttonPanel.add(addLaundromatButton);
+    // Row 6: Highlights
+    gbc.gridx = 0; gbc.gridy = 6; gbc.weightx = 0; gbc.anchor = GridBagConstraints.EAST;
+    formPanel.add(new JLabel("Highlights (comma/semicolon-separated):"), gbc);
+    gbc.gridx = 1; gbc.gridy = 6; gbc.weightx = 1.0; gbc.anchor = GridBagConstraints.WEST;
+    laundromatHighlightsField = new JTextField(20);
+    laundromatHighlightsField.setText("Standard Wash & Fold"); // Example default
+    formPanel.add(laundromatHighlightsField, gbc);
 
-        updateLaundromatButton = new JButton("Update Selected");
-        updateLaundromatButton.addActionListener(e -> updateLaundromat());
-        updateLaundromatButton.setEnabled(false); // Disabled until a row is clicked
-        buttonPanel.add(updateLaundromatButton);
+    // Row 7: Buttons
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    addLaundromatButton = new JButton("Add New");
+    addLaundromatButton.addActionListener(e -> addLaundromat());
+    buttonPanel.add(addLaundromatButton);
 
-        clearLaundromatButton = new JButton("Clear Form");
-        clearLaundromatButton.addActionListener(e -> clearLaundromatForm());
-        buttonPanel.add(clearLaundromatButton);
+    updateLaundromatButton = new JButton("Update Selected");
+    updateLaundromatButton.addActionListener(e -> updateLaundromat());
+    updateLaundromatButton.setEnabled(false); // Disabled until a row is clicked
+    buttonPanel.add(updateLaundromatButton);
 
-        gbc.gridx = 0; gbc.gridy = 6; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
-        formPanel.add(buttonPanel, gbc);
+    clearLaundromatButton = new JButton("Clear Form");
+    clearLaundromatButton.addActionListener(e -> clearLaundromatForm());
+    buttonPanel.add(clearLaundromatButton);
 
-        panel.add(formPanel, BorderLayout.SOUTH);
-        return panel;
-    }
+    gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2; gbc.anchor = GridBagConstraints.CENTER;
+    formPanel.add(buttonPanel, gbc);
+
+    panel.add(formPanel, BorderLayout.SOUTH);
+    return panel;
+}
 
     // refresh customer table
     private void refreshCustomerTable() {
@@ -323,72 +357,100 @@ public class AdminView extends JPanel {
     }
 
     // add new btn
-    private void addLaundromat() {
-        try {
-            boolean success = adminDAO.addLaundromat(
-                    laundromatNameField.getText(),
-                    laundromatAddressField.getText(),
-                    laundromatImageField.getText(),
-                    laundromatDistanceField.getText(),
-                    laundromatEstTimeField.getText(),
-                    laundromatHighlightsField.getText()
-            );
-
-            if (success) {
-                JOptionPane.showMessageDialog(this, "Laundromat added successfully!");
-                refreshLaundromatsTable();
-                clearLaundromatForm();
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to add laundromat.", "Error", JOptionPane.ERROR_MESSAGE);
+    // add new btn
+private void addLaundromat() {
+    try {
+        // parse price
+        double pricePerLoad = 0.0;
+        String priceText = laundromatPriceField.getText().trim();
+        if (!priceText.isEmpty()) {
+            try {
+                pricePerLoad = Double.parseDouble(priceText);
+            } catch (NumberFormatException nfe) {
+                JOptionPane.showMessageDialog(this, "Invalid price. Please enter a numeric value for Price per load.", "Validation Error", JOptionPane.WARNING_MESSAGE);
+                return;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error adding laundromat: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
         }
+
+        boolean success = adminDAO.addLaundromat(
+                laundromatNameField.getText(),
+                laundromatAddressField.getText(),
+                laundromatImageField.getText(),
+                laundromatDistanceField.getText(),
+                laundromatEstTimeField.getText(),
+                laundromatHighlightsField.getText(),
+                pricePerLoad
+        );
+
+        if (success) {
+            JOptionPane.showMessageDialog(this, "Laundromat added successfully!");
+            refreshLaundromatsTable();
+            clearLaundromatForm();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to add laundromat.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error adding laundromat: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
     }
+}
 
     // update btn
-    private void updateLaundromat() {
-        if (selectedLaundromatId == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a laundromat from the table to update.", "No Selection", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        try {
-            boolean success = adminDAO.updateLaundromat(
-                    selectedLaundromatId,
-                    laundromatNameField.getText(),
-                    laundromatAddressField.getText(),
-                    laundromatImageField.getText(),
-                    laundromatDistanceField.getText(),
-                    laundromatEstTimeField.getText(),
-                    laundromatHighlightsField.getText()
-            );
-
-            if (success) {
-                JOptionPane.showMessageDialog(this, "Laundromat updated successfully!");
-                refreshLaundromatsTable();
-                clearLaundromatForm();
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to update laundromat.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error updating laundromat: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
-        }
+    // update btn
+private void updateLaundromat() {
+    if (selectedLaundromatId == -1) {
+        JOptionPane.showMessageDialog(this, "Please select a laundromat from the table to update.", "No Selection", JOptionPane.WARNING_MESSAGE);
+        return;
     }
+
+    try {
+        double pricePerLoad = 0.0;
+        String priceText = laundromatPriceField.getText().trim();
+        if (!priceText.isEmpty()) {
+            try {
+                pricePerLoad = Double.parseDouble(priceText);
+            } catch (NumberFormatException nfe) {
+                JOptionPane.showMessageDialog(this, "Invalid price. Please enter a numeric value for Price per load.", "Validation Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        boolean success = adminDAO.updateLaundromat(
+                selectedLaundromatId,
+                laundromatNameField.getText(),
+                laundromatAddressField.getText(),
+                laundromatImageField.getText(),
+                laundromatDistanceField.getText(),
+                laundromatEstTimeField.getText(),
+                laundromatHighlightsField.getText(),
+                pricePerLoad
+        );
+
+        if (success) {
+            JOptionPane.showMessageDialog(this, "Laundromat updated successfully!");
+            refreshLaundromatsTable();
+            clearLaundromatForm();
+        } else {
+            JOptionPane.showMessageDialog(this, "Failed to update laundromat.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error updating laundromat: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
 
     // clear fields
     private void clearLaundromatForm() {
-        laundromatNameField.setText("");
-        laundromatAddressField.setText("");
-        laundromatImageField.setText("Pictures/default.png");
-        laundromatDistanceField.setText("N/A");
-        laundromatEstTimeField.setText("N/A");
-        laundromatHighlightsField.setText("Standard Wash & Fold");
+    laundromatNameField.setText("");
+    laundromatAddressField.setText("");
+    laundromatImageField.setText("Pictures/default.png");
+    laundromatDistanceField.setText("N/A");
+    laundromatEstTimeField.setText("N/A");
+    laundromatPriceField.setText("0.00");
+    laundromatHighlightsField.setText("Standard Wash & Fold");
 
-        selectedLaundromatId = -1; // Clear selection ID
-        laundromatsTable.clearSelection(); // Clear table selection
-        updateLaundromatButton.setEnabled(false); // Disable update button
-    }
+    selectedLaundromatId = -1; // Clear selection ID
+    laundromatsTable.clearSelection(); // Clear table selection
+    updateLaundromatButton.setEnabled(false); // Disable update button
+}
 }

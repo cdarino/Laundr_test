@@ -532,40 +532,77 @@ public class ConfirmPaymentPanel extends JPanel {
             return false;
         }
 
-        // Compute a simple total (keeps previous UI behavior)
-        int qty = parseQuantityFromLabel(quantityText);
-        double total = qty * 50.0 * Math.max(1, parseSelectedServiceCount());
+        // --- Compute total from selected services (unit prices) and quantity ---
+    int qty = parseQuantityFromLabel(quantityText);
+    List<String> services = parseServiceNames(servicesText);
 
-        String instructionsPlain = extractTextFromHTML(instructionsText);
-        String paymentMethod = buildPaymentMethodString();
+    // Resolve service IDs and unit prices for the selected laundromat
+    ServiceDAO sdao = new ServiceDAO(conn);
+    Map<Integer, Integer> serviceQtyMap = new LinkedHashMap<>(); // serviceID -> qty
+    double sumUnitPrices = 0.0;
 
-        OrderDAO odao = new OrderDAO(conn);
-        int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
-        if (newId <= 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Failed to create order.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            return false;
+    for (String sname : services) {
+        String normalized = sname.trim();
+        if (normalized.isEmpty()) continue;
+
+        // Prefer resolving service in the selected laundromat
+        int sid = sdao.getServiceIdForName(laundromatID, normalized);
+
+        if (sid <= 0) {
+            // fallback: try name-only lookup (ServiceDAO.getServiceIdForName already tries that if laundromatId <= 0)
+            sid = sdao.getServiceIdForName(-1, normalized);
         }
 
-        // Persist orderDetails: map serviceID -> quantity (use shared qty from PickupPanel)
-        Map<Integer, Integer> serviceQtyMap = new LinkedHashMap<>();
-        List<String> services = parseServiceNames(servicesText);
-        ServiceDAO sdao = new ServiceDAO(conn);
-        for (String sname : services) {
-            String normalized = sname.trim();
-            if (normalized.isEmpty()) continue;
-            int sid = sdao.getServiceIdForName(laundromatID, normalized);
-            if (sid > 0) {
-                serviceQtyMap.put(sid, Math.max(1, qty));
-            } else {
-                // fallback: try name-only lookup (ServiceDAO already falls back)
-                sid = sdao.getServiceIdForName(-1, normalized);
-                if (sid > 0) serviceQtyMap.put(sid, Math.max(1, qty));
-                else System.err.println("Could not map service name to id: " + normalized);
-            }
+        if (sid <= 0) {
+            // couldn't map this service name -> id in DB; skip it (log for debugging)
+            System.err.println("ConfirmPaymentPanel: Could not find service in DB: " + normalized);
+            continue;
         }
+
+        double unitPrice = sdao.getPriceForServiceId(sid);
+        if (unitPrice < 0.0) {
+            System.err.println("ConfirmPaymentPanel: Could not get price for serviceID " + sid + " (" + normalized + ")");
+            continue;
+        }
+
+        // accumulate unit prices (will be multiplied by qty later)
+        sumUnitPrices += unitPrice;
+
+        // store quantity for insertion into orderDetails (shared qty applies to all selected services)
+        serviceQtyMap.put(sid, Math.max(1, qty));
+    }
+
+    if (serviceQtyMap.isEmpty()) {
+        JOptionPane.showMessageDialog(this,
+                "No valid services were found to create an order. Please re-check your selection.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+
+    double total = sumUnitPrices * Math.max(1, qty);
+
+    String instructionsPlain = extractTextFromHTML(instructionsText);
+    String paymentMethod = buildPaymentMethodString();
+
+    OrderDAO odao = new OrderDAO(conn);
+    int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
+    if (newId <= 0) {
+        JOptionPane.showMessageDialog(this,
+                "Failed to create order.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+
+        // persist per-service orderDetails (OrderDAO.createOrderDetails computes subtotal = basePrice * qty)
+    if (!serviceQtyMap.isEmpty()) {
+        boolean ok = odao.createOrderDetails(newId, serviceQtyMap);
+        if (!ok) {
+            System.err.println("ConfirmPaymentPanel: createOrderDetails failed for order " + newId);
+            // Not fatal here — we've created the order. You may want to rollback in a transaction in future.
+        }
+    }
 
         if (!serviceQtyMap.isEmpty()) {
             boolean ok = odao.createOrderDetails(newId, serviceQtyMap);

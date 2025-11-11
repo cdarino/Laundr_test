@@ -18,6 +18,8 @@ import org.example.database.DBConnect;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class LaundromatDetailsPanel extends JPanel {
 
@@ -579,7 +581,76 @@ public class LaundromatDetailsPanel extends JPanel {
         ratingLabel.setText(String.format("%.1f", rating));
 
         // Update Highlights
-        setHighlights(getHighlightsFor(data));
+        String[] bullets = null;
+
+// 1) If DTO already has highlights populated, use it
+if (data != null && data.highlights != null && !data.highlights.trim().isEmpty()) {
+    bullets = parseHighlightsString(data.highlights);
+}
+
+// 2) If no highlights in DTO, try best-effort DB lookup by name+address, then name-only
+if ((bullets == null || bullets.length == 0) && data != null) {
+    try {
+        java.sql.Connection conn = org.example.database.DBConnect.getConnection();
+        if (conn != null && !conn.isClosed()) {
+            String q = "SELECT laundromatID, pricePerLoad, highlights FROM laundromat WHERE laundromatName = ? AND laundromatAddress = ? LIMIT 1";
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(q)) {
+                ps.setString(1, data.name != null ? data.name.trim() : "");
+                ps.setString(2, data.address != null ? data.address.trim() : "");
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        // populate DTO so other code can use it
+                        double price = rs.getDouble("pricePerLoad");
+                        String dbHighlights = rs.getString("highlights");
+                        data.pricePerLoad = price;
+                        data.highlights = dbHighlights;
+                        if (dbHighlights != null && !dbHighlights.trim().isEmpty()) {
+                            bullets = parseHighlightsString(dbHighlights);
+                        }
+                    }
+                }
+            }
+
+            // fallback: try name-only match if still no bullets
+            if ((bullets == null || bullets.length == 0) && data.name != null) {
+                String q2 = "SELECT laundromatID, pricePerLoad, highlights FROM laundromat WHERE laundromatName = ? LIMIT 1";
+                try (java.sql.PreparedStatement ps2 = conn.prepareStatement(q2)) {
+                    ps2.setString(1, data.name.trim());
+                    try (java.sql.ResultSet rs2 = ps2.executeQuery()) {
+                        if (rs2.next()) {
+                            double price2 = rs2.getDouble("pricePerLoad");
+                            String dbHighlights2 = rs2.getString("highlights");
+                            data.pricePerLoad = price2;
+                            data.highlights = dbHighlights2;
+                            if (dbHighlights2 != null && !dbHighlights2.trim().isEmpty()) {
+                                bullets = parseHighlightsString(dbHighlights2);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Exception ex) {
+        // best-effort: if DB fails, continue and fall back to curated list
+        ex.printStackTrace();
+    }
+}
+
+// 3) Final fallback to curated, hard-coded highlights (preserves previous behavior)
+if (bullets == null || bullets.length == 0) {
+    bullets = getHighlightsFor(data);
+}
+
+// 4) Append price bullet (last)
+java.util.List<String> bulletList = new java.util.ArrayList<>(java.util.Arrays.asList(bullets != null ? bullets : new String[0]));
+if (data != null && data.pricePerLoad > 0.0) {
+    bulletList.add(String.format("Price per load: \u20B1%.2f", data.pricePerLoad));
+} else {
+    bulletList.add("Price per load: N/A");
+}
+
+// 5) Set highlights into the existing renderer
+setHighlights(bulletList.toArray(new String[0]));
 
         // Populate reviews (exactly 5 review cards per laundromat, with 20px gaps)
         reviewsPanel.removeAll();
@@ -618,24 +689,29 @@ public class LaundromatDetailsPanel extends JPanel {
         try {
     Connection conn = DBConnect.getConnection();
     if (conn != null && !conn.isClosed()) {
-        // Use both name and address to find the exact laundromat row (safer)
-        String q = "SELECT laundromatID FROM laundromat WHERE laundromatName = ? AND laundromatAddress = ? LIMIT 1";
+        String q = "SELECT laundromatID, pricePerLoad FROM laundromat WHERE laundromatName = ? AND laundromatAddress = ? LIMIT 1";
         try (PreparedStatement ps = conn.prepareStatement(q)) {
             ps.setString(1, data.name != null ? data.name.trim() : "");
             ps.setString(2, data.address != null ? data.address.trim() : "");
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     int id = rs.getInt("laundromatID");
+                    double price = rs.getDouble("pricePerLoad");
+                    data.pricePerLoad = price; // populate DTO so UI can read it
                     AppState.setSelectedLaundromat(id, data.name);
                 } else {
-                    // fallback: if exact name+address not found, try match by name only
-                    String q2 = "SELECT laundromatID FROM laundromat WHERE laundromatName = ? LIMIT 1";
+                    // fallback: try match by name only (first match)
+                    String q2 = "SELECT laundromatID, pricePerLoad FROM laundromat WHERE laundromatName = ? LIMIT 1";
                     try (PreparedStatement ps2 = conn.prepareStatement(q2)) {
                         ps2.setString(1, data.name != null ? data.name.trim() : "");
                         try (ResultSet rs2 = ps2.executeQuery()) {
                             if (rs2.next()) {
-                                AppState.setSelectedLaundromat(rs2.getInt("laundromatID"), data.name);
+                                int id2 = rs2.getInt("laundromatID");
+                                double price2 = rs2.getDouble("pricePerLoad");
+                                data.pricePerLoad = price2;
+                                AppState.setSelectedLaundromat(id2, data.name);
                             } else {
+                                // no match: clear selection
                                 AppState.clearSelectedLaundromat();
                             }
                         }
@@ -644,7 +720,7 @@ public class LaundromatDetailsPanel extends JPanel {
             }
         }
     } else {
-        // no DB connection -> do not change AppState
+        System.err.println("[LaundromatDetailsPanel] DB connection null — selection not saved.");
     }
 } catch (Exception ex) {
     ex.printStackTrace();
@@ -910,63 +986,98 @@ public class LaundromatDetailsPanel extends JPanel {
         descriptionArea.setText(sb.toString());
         descriptionArea.setCaretPosition(0);
     }
-
-    private String[] getHighlightsFor(LaundromatData data) {
-        String name = data != null && data.name != null ? data.name.trim() : "";
-
-        switch (name) {
-            case "WashEat Laundry":
-                return new String[] {
-                        "Open 24 Hours",
-                        "Hypoallergenic Options",
-                        "Stain Pre-Treat",
-                        "Sanitized Machines",
-                        "Bedding & Large Items",
-                        "Competitive Pricing"
-                };
-            case "La Vahh Laundromat":
-                return new String[] {
-                        "Extended Hours",
-                        "Delicates Care",
-                        "Hypoallergenic Options",
-                        "Hand-Finished Option",
-                        "Rewash Guarantee"
-                };
-            case "Allklean Laundromat":
-                return new String[] {
-                        "Deep-Clean Focus",
-                        "Bedding & Large Items",
-                        "Stain Pre-Treat",
-                        "Sanitized Machines",
-                        "Volume Discounts"
-                };
-            case "D'Laundry Station":
-                return new String[] {
-                        "Competitive Pricing",
-                        "Large Loads Welcome",
-                        "Hypoallergenic Options",
-                        "Consistent Folding Standard",
-                        "Rewash Guarantee"
-                };
-            case "RouTine Laundromat Roxas":
-                return new String[] {
-                    "Host-Ready Linens",
-                    "Set Bundling",
-                    "Turnover-Ready Packaging",
-                    "Consistent Folding Standard",
-                    "Volume Discounts"
-                };
-            default:
-                return new String[] {
-                        "Hypoallergenic Options",
-                        "Stain Pre-Treat",
-                        "Delicates Care",
-                        "Sanitized Machines",
-                        "Competitive Pricing",
-                        "Rewash Guarantee"
-                };
+    
+    private String[] parseHighlightsString(String raw) {
+    if (raw == null) return new String[0];
+    String s = raw.trim();
+    String[] parts;
+    if (s.contains(";")) {
+        parts = s.split("\\s*;\\s*");
+    } else if (s.contains("\n")) {
+        parts = s.split("\\r?\\n");
+    } else if (s.contains(",")) {
+        parts = s.split("\\s*,\\s*");
+    } else {
+        parts = new String[]{ s };
+    }
+    List<String> out = new ArrayList<>();
+    for (String p : parts) {
+        if (p != null) {
+            String t = p.trim();
+            if (!t.isEmpty()) out.add(t);
         }
     }
+    return out.toArray(new String[0]);
+}
+
+    private String[] getHighlightsFor(LaundromatData data) {
+    // 1) prefer DTO-provided highlights
+    if (data != null && data.highlights != null && !data.highlights.trim().isEmpty()) {
+        return parseHighlightsString(data.highlights);
+    }
+
+    // 2) try DB lookup (best-effort)
+    if (data != null && (data.name != null && !data.name.trim().isEmpty())) {
+        try {
+            Connection conn = org.example.database.DBConnect.getConnection();
+            if (conn != null && !conn.isClosed()) {
+                // Try name + address (most specific)
+                if (data.address != null && !data.address.trim().isEmpty()) {
+                    String sql = "SELECT highlights, pricePerLoad FROM laundromat WHERE laundromatName = ? AND laundromatAddress = ? LIMIT 1";
+                    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setString(1, data.name.trim());
+                        ps.setString(2, data.address.trim());
+                        try (ResultSet rs = ps.executeQuery()) {
+                            if (rs.next()) {
+                                String dbHighlights = rs.getString("highlights");
+                                double dbPrice = rs.getDouble("pricePerLoad");
+                                if (dbHighlights != null && !dbHighlights.trim().isEmpty()) {
+                                    data.highlights = dbHighlights;         // populate DTO
+                                    data.pricePerLoad = dbPrice;           // populate DTO for later use
+                                    return parseHighlightsString(dbHighlights);
+                                } else {
+                                    // still store price if present
+                                    data.pricePerLoad = dbPrice;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: try by name only
+                String sqlNameOnly = "SELECT highlights, pricePerLoad FROM laundromat WHERE laundromatName = ? LIMIT 1";
+                try (PreparedStatement ps2 = conn.prepareStatement(sqlNameOnly)) {
+                    ps2.setString(1, data.name.trim());
+                    try (ResultSet rs2 = ps2.executeQuery()) {
+                        if (rs2.next()) {
+                            String dbHighlights2 = rs2.getString("highlights");
+                            double dbPrice2 = rs2.getDouble("pricePerLoad");
+                            if (dbHighlights2 != null && !dbHighlights2.trim().isEmpty()) {
+                                data.highlights = dbHighlights2;
+                                data.pricePerLoad = dbPrice2;
+                                return parseHighlightsString(dbHighlights2);
+                            } else {
+                                // still store price
+                                data.pricePerLoad = dbPrice2;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            // best-effort: log and continue to fallback
+            ex.printStackTrace();
+        }
+    }
+
+    // 3) final fallback -- keep a small generic list instead of the per-name hardcoding
+    return new String[] {
+            "Quality care for your garments",
+            "Sanitized machines",
+            "Consistent folding standard",
+            "Rewash guarantee"
+    };
+}
 
     // Five review cards per laundromat with curated names and comments
     private List<ReviewCard> getReviewsFor(LaundromatData data) {
