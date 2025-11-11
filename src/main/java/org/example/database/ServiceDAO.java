@@ -39,6 +39,51 @@ public class ServiceDAO {
         return services;
     }
 
+    public int getServiceIdForName(int laundromatId, String serviceName) {
+    if (conn == null) return -1;
+    // If laundromatId is <= 0, try to match by name only (fallback)
+    if (laundromatId > 0) {
+        String sql = "SELECT serviceID FROM service WHERE laundromatID = ? AND serviceName = ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, laundromatId);
+            ps.setString(2, serviceName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt("serviceID");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    // fallback: match by name only
+    String sql2 = "SELECT serviceID FROM service WHERE serviceName = ? LIMIT 1";
+    try (PreparedStatement ps = conn.prepareStatement(sql2)) {
+        ps.setString(1, serviceName);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getInt("serviceID");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return -1;
+}
+
+/**
+ * Lookup unit price for a serviceID. Returns -1 on error/not found.
+ */
+public double getPriceForServiceId(int serviceId) {
+    if (conn == null) return -1.0;
+    String sql = "SELECT basePrice FROM service WHERE serviceID = ? LIMIT 1";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, serviceId);
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) return rs.getDouble("basePrice");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return -1.0;
+}
+
     private String defaultIconFor(String serviceName) {
         return switch (serviceName) {
             case "Dry Clean" -> "Icons/Services/dryClean.svg";

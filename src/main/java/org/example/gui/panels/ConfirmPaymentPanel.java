@@ -6,9 +6,12 @@ import org.example.gui.utils.creators.buttonCreator;
 import org.example.gui.utils.creators.iconCreator;
 import org.example.gui.utils.fonts.fontLoader;
 import org.example.gui.utils.fonts.fontManager;
+import org.example.session.AppState;
 import org.example.database.CustomerDAO;
 import org.example.database.DBConnect;
 import org.example.database.OrderDAO;
+import org.example.database.ServiceDAO;
+
 import com.formdev.flatlaf.FlatLaf;
 
 import javax.swing.*;
@@ -19,6 +22,13 @@ import java.beans.PropertyChangeListener;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ConfirmPaymentPanel extends JPanel {
     private static final Color FIXED_BACKGROUND = new Color(245, 245, 245);
@@ -471,92 +481,150 @@ public class ConfirmPaymentPanel extends JPanel {
 
     // NEW: persist order using same customer resolution as Orders panel
     private boolean createAndPersistOrder() {
-        try {
-            // Resolve current username from the top-level window (Mainframe)
-            Window w = SwingUtilities.getWindowAncestor(this);
-            String currentUser = null;
-            if (w instanceof org.example.gui.Mainframe) {
-                currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
-            }
-            if (currentUser == null || currentUser.isBlank()) {
-                JOptionPane.showMessageDialog(this,
-                        "You must be logged in to place an order.",
-                        "Not Logged In",
-                        JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-
-            Connection conn = DBConnect.getConnection();
-            if (conn == null || conn.isClosed()) {
-                JOptionPane.showMessageDialog(this,
-                        "No database connection.",
-                        "Database Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // Get custID using the same DAO logic Orders uses
-            CustomerDAO cdao = new CustomerDAO(conn);
-            int custID = cdao.getCustomerId(currentUser);
-            if (custID <= 0) {
-                JOptionPane.showMessageDialog(this,
-                        "Could not resolve your customer profile.",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // Pick a laundromatID — if you track selection elsewhere, replace this lookup.
-            int laundromatID = 0;
-            try (Statement st = conn.createStatement();
-                 ResultSet rs = st.executeQuery("SELECT laundromatID FROM laundromat ORDER BY laundromatID LIMIT 1")) {
-                if (rs.next()) laundromatID = rs.getInt(1);
-            }
-            if (laundromatID <= 0) {
-                JOptionPane.showMessageDialog(this,
-                        "No laundromat available to accept the order.",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // Compute a simple total from the quantity text (keeps your UI unchanged)
-            double total = 0.0;
-            try {
-                if (quantityText != null) {
-                    String digits = quantityText.replaceAll("[^0-9.]", "");
-                    if (!digits.isEmpty()) {
-                        total = Double.parseDouble(digits) * 50.0; // nominal price per unit
-                    }
-                }
-            } catch (Exception ignored) {}
-
-            String instructionsPlain = extractTextFromHTML(instructionsText);
-            String paymentMethod = buildPaymentMethodString();
-
-            OrderDAO odao = new OrderDAO(conn);
-            int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
-            if (newId <= 0) {
-                JOptionPane.showMessageDialog(this,
-                        "Failed to create order.",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-                return false;
-            }
-
-            // Let containers listening for "orderCreated" update if they want
-            firePropertyChange("orderCreated", -1, newId);
-            return true;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
+    try {
+        // Resolve current username from the top-level window (Mainframe)
+        Window w = SwingUtilities.getWindowAncestor(this);
+        String currentUser = null;
+        if (w instanceof org.example.gui.Mainframe) {
+            currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
+        }
+        if (currentUser == null || currentUser.isBlank()) {
             JOptionPane.showMessageDialog(this,
-                    "Unexpected error while creating order: " + ex.getMessage(),
+                    "You must be logged in to place an order.",
+                    "Not Logged In",
+                    JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+
+        Connection conn = DBConnect.getConnection();
+        if (conn == null || conn.isClosed()) {
+            JOptionPane.showMessageDialog(this,
+                    "No database connection.",
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        // Get custID using the same DAO logic Orders uses
+        CustomerDAO cdao = new CustomerDAO(conn);
+        int custID = cdao.getCustomerId(currentUser);
+        if (custID <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Could not resolve your customer profile.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
             return false;
         }
+
+        // Determine laundromat: prefer AppState.selectedLaundromatID
+        int laundromatID = AppState.selectedLaundromatID;
+        if (laundromatID <= 0) {
+            try (Statement st = conn.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT laundromatID FROM laundromat ORDER BY laundromatID LIMIT 1")) {
+                if (rs.next()) laundromatID = rs.getInt(1);
+            }
+        }
+        if (laundromatID <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "No laundromat selected and none available in the database.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        // --- Compute total from selected services (unit prices) and quantity ---
+    int qty = parseQuantityFromLabel(quantityText);
+    List<String> services = parseServiceNames(servicesText);
+
+    // Resolve service IDs and unit prices for the selected laundromat
+    ServiceDAO sdao = new ServiceDAO(conn);
+    Map<Integer, Integer> serviceQtyMap = new LinkedHashMap<>(); // serviceID -> qty
+    double sumUnitPrices = 0.0;
+
+    for (String sname : services) {
+        String normalized = sname.trim();
+        if (normalized.isEmpty()) continue;
+
+        // Prefer resolving service in the selected laundromat
+        int sid = sdao.getServiceIdForName(laundromatID, normalized);
+
+        if (sid <= 0) {
+            // fallback: try name-only lookup (ServiceDAO.getServiceIdForName already tries that if laundromatId <= 0)
+            sid = sdao.getServiceIdForName(-1, normalized);
+        }
+
+        if (sid <= 0) {
+            // couldn't map this service name -> id in DB; skip it (log for debugging)
+            System.err.println("ConfirmPaymentPanel: Could not find service in DB: " + normalized);
+            continue;
+        }
+
+        double unitPrice = sdao.getPriceForServiceId(sid);
+        if (unitPrice < 0.0) {
+            System.err.println("ConfirmPaymentPanel: Could not get price for serviceID " + sid + " (" + normalized + ")");
+            continue;
+        }
+
+        // accumulate unit prices (will be multiplied by qty later)
+        sumUnitPrices += unitPrice;
+
+        // store quantity for insertion into orderDetails (shared qty applies to all selected services)
+        serviceQtyMap.put(sid, Math.max(1, qty));
     }
+
+    if (serviceQtyMap.isEmpty()) {
+        JOptionPane.showMessageDialog(this,
+                "No valid services were found to create an order. Please re-check your selection.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+
+    double total = sumUnitPrices * Math.max(1, qty);
+
+    String instructionsPlain = extractTextFromHTML(instructionsText);
+    String paymentMethod = buildPaymentMethodString();
+
+    OrderDAO odao = new OrderDAO(conn);
+    int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
+    if (newId <= 0) {
+        JOptionPane.showMessageDialog(this,
+                "Failed to create order.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+
+        // persist per-service orderDetails (OrderDAO.createOrderDetails computes subtotal = basePrice * qty)
+    if (!serviceQtyMap.isEmpty()) {
+        boolean ok = odao.createOrderDetails(newId, serviceQtyMap);
+        if (!ok) {
+            System.err.println("ConfirmPaymentPanel: createOrderDetails failed for order " + newId);
+            // Not fatal here — we've created the order. You may want to rollback in a transaction in future.
+        }
+    }
+
+        if (!serviceQtyMap.isEmpty()) {
+            boolean ok = odao.createOrderDetails(newId, serviceQtyMap);
+            if (!ok) {
+                System.err.println("createOrderDetails reported failure for order " + newId);
+            }
+        } else {
+            System.out.println("No service IDs resolved to persist orderDetails for order " + newId);
+        }
+
+        firePropertyChange("orderCreated", -1, newId);
+        return true;
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this,
+                "Unexpected error while creating order: " + ex.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
+        return false;
+    }
+}
 
     private String buildPaymentMethodString() {
         if (cashOnPickupBtn.isSelected()) return "cash_on_pickup";
@@ -650,6 +718,39 @@ public class ConfirmPaymentPanel extends JPanel {
         
         return true;
     }
+
+    /** Parse the servicesText (HTML/label) into a list of service names (best-effort). */
+private List<String> parseServiceNames(String servicesHtml) {
+    List<String> out = new ArrayList<>();
+    if (servicesHtml == null) return out;
+    String plain = servicesHtml.replaceAll("<[^>]*>", "\n");
+    plain = plain.replace("•", "\n").replace("·", "\n");
+    String[] lines = plain.split("[\\r\\n]+");
+    for (String line : lines) {
+        String l = line.trim();
+        l = l.replaceAll("^[\\u2022\\u2023\\-\\*\\s]+", "").trim();
+        if (!l.isEmpty()) out.add(l);
+    }
+    return out;
+}
+
+/** Parse quantity integer from the HTML label passed in quantityText (returns 1 if none). */
+private int parseQuantityFromLabel(String qtyLabelHtml) {
+    if (qtyLabelHtml == null) return 1;
+    String plain = qtyLabelHtml.replaceAll("<[^>]*>", " ").replace("\u00A0", " ").trim();
+    Matcher m = Pattern.compile("(\\d+)").matcher(plain);
+    if (m.find()) {
+        try { return Integer.parseInt(m.group(1)); }
+        catch (NumberFormatException ignored) {}
+    }
+    return 1;
+}
+
+/** Count selected services from the servicesText (best-effort). */
+private int parseSelectedServiceCount() {
+    List<String> s = parseServiceNames(servicesText);
+    return s.size() > 0 ? s.size() : 1;
+}
     
     private String extractTextFromHTML(String html) {
         if (html == null) return "None";

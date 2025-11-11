@@ -1,17 +1,25 @@
 package org.example.session;
 
 /**
- * Simple global app state fallback for cross-panel selections.
+ * Small global state holder for selected laundromat and optional current customer id.
+ * Kept intentionally tiny and procedural to minimize refactor.
  */
 public final class AppState {
     private AppState() {}
 
-    // Last selected laundromat name (clicking a laundromat card / showing details sets this)
+    // Selected laundromat chosen in Laundromats -> LaundromatDetails
+    // -1 means "no selection"
+    public static int selectedLaundromatID = -1;
     public static String selectedLaundromatName = null;
 
-    // Last selected laundromat ID (resolved from DB when details are shown).
-    // Prefer this ID when persisting orders.
-    public static int selectedLaundromatID = 0;
+    // Optional convenience to set both
+    public static void setSelectedLaundromat(int id, String name) {
+        selectedLaundromatID = id;
+        selectedLaundromatName = name;
+    }
 
-    // (Other shared state can go here later)
+    public static void clearSelectedLaundromat() {
+        selectedLaundromatID = -1;
+        selectedLaundromatName = null;
+    }
 }

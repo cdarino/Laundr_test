@@ -177,9 +177,11 @@ public class PickupPanel extends JPanel {
         }*/
 
         for (Service s : services) {
-            ServiceButton card = new ServiceButton(s.getName(), s.getIconPath());
-            servicesPanel.add(card);
-        }
+    // pass the base price to the button and keep a reference for theme updates
+    ServiceButton card = new ServiceButton(s.getName(), s.getIconPath(), s.basePrice());
+    servicesPanel.add(card);
+    serviceButtons.add(card);
+}
 
         // Scroll pane for services
         JScrollPane scrollPane = new JScrollPane(servicesPanel);
@@ -720,93 +722,120 @@ public class PickupPanel extends JPanel {
     }
     
     private class ServiceButton extends roundedPanel {
-        private boolean selected;
-        private String text;
-        private String iconPath;
-        private JLabel iconLabel;
-        private JLabel textLabel;
+    private boolean selected;
+    private String text;
+    private String iconPath;
+    private double price;
+    private JLabel iconLabel;
+    private JLabel textLabel;
+    private JLabel priceLabel;
+
+    public ServiceButton(String text, String iconPath, double price) {
+        super(16);
+        this.text = text;
+        this.iconPath = iconPath;
+        this.price = price;
+
+        setLayout(new BorderLayout(5, 5));
+        setOpaque(false);
+        setBackground(new Color(0,0,0,0));
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        setBorder(BorderFactory.createCompoundBorder(
+            new roundedBorder(16, getAccentBorderColor(), 2),
+            new EmptyBorder(15, 10, 15, 10)
+        ));
+
+        Icon icon = iconCreator.getIcon(iconPath, 40, 40);
+        iconLabel = new JLabel(icon);
+        iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        add(iconLabel, BorderLayout.CENTER);
+
+        // name label
+        textLabel = new JLabel(text);
+        textLabel.setFont(UIManager.getFont("Label.font"));
+        textLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // price label (small, below the name)
+        priceLabel = new JLabel(String.format("\u20B1%.2f / load", price));
+        Font baseFont = UIManager.getFont("Label.font");
+        if (baseFont != null) {
+            priceLabel.setFont(baseFont.deriveFont(Font.PLAIN, Math.max(10f, baseFont.getSize2D() - 1f)));
+        }
+        priceLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // stack name + price vertically
+        JPanel south = new JPanel();
+        south.setOpaque(false);
+        south.setLayout(new BoxLayout(south, BoxLayout.Y_AXIS));
+        textLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        south.add(textLabel);
+        south.add(Box.createVerticalStrut(4));
+        south.add(priceLabel);
+        add(south, BorderLayout.SOUTH);
+
+        updateThemeColors();
+
+        addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                selected = !selected;
+                if (selected) {
+                    selectedServices.add(text);
+                    setBackground(new Color(100,150,255));
+                    setBorder(BorderFactory.createCompoundBorder(
+                        new roundedBorder(16, new Color(50, 100, 200), 2),
+                        new EmptyBorder(15, 10, 15, 10)
+                    ));
+                } else {
+                    selectedServices.remove(text);
+                    setOpaque(false);
+                    setBackground(new Color(0,0,0,0));
+                    setBorder(BorderFactory.createCompoundBorder(
+                        new roundedBorder(16, getAccentBorderColor(), 2),
+                        new EmptyBorder(15, 10, 15, 10)
+                    ));
+                }
+                updateOrderSummary();
+            }
+            final Color limeHover = UIManager.getColor("Sidebar.hoverBackground") != null
+                ? UIManager.getColor("Sidebar.hoverBackground")
+                : new Color(0xDAEC73);
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                if (!selected) {
+                    setBackground(limeHover);
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                if (!selected) {
+                    setOpaque(false);
+                    setBackground(new Color(0,0,0,0));
+                }
+            }
+        });
+    }
         
-        public ServiceButton(String text, String iconPath) {
-            super(16);
-            this.text = text;
-            this.iconPath = iconPath;
-            
-            setLayout(new BorderLayout(5, 5));
-            setOpaque(false);
-            setBackground(new Color(0,0,0,0));
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        public void updateThemeColors() {
+        Color textColor = getAdaptiveForegroundColor();
+        if (textLabel != null) {
+            textLabel.setForeground(textColor);
+        }
+        if (priceLabel != null) {
+            // price label uses slightly muted color in light mode; in dark mode use white
+            Color priceColor = isDarkTheme() ? Color.WHITE : new Color(0x4A4A4A);
+            priceLabel.setForeground(priceColor);
+        }
+        if (!selected) {
             setBorder(BorderFactory.createCompoundBorder(
                 new roundedBorder(16, getAccentBorderColor(), 2),
                 new EmptyBorder(15, 10, 15, 10)
             ));
-            
-            Icon icon = iconCreator.getIcon(iconPath, 40, 40);
-            iconLabel = new JLabel(icon);
-            iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            add(iconLabel, BorderLayout.CENTER);
-            
-            textLabel = new JLabel(text);
-            textLabel.setFont(UIManager.getFont("Label.font"));
-            textLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            add(textLabel, BorderLayout.SOUTH);
-            
-            updateThemeColors();
-            
-            addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    selected = !selected;
-                    if (selected) {
-                        selectedServices.add(text);
-                        setBackground(new Color(100,150,255));
-                        setBorder(BorderFactory.createCompoundBorder(
-                            new roundedBorder(16, new Color(50, 100, 200), 2),
-                            new EmptyBorder(15, 10, 15, 10)
-                        ));
-                    } else {
-                        selectedServices.remove(text);
-                        setOpaque(false);
-                        setBackground(new Color(0,0,0,0));
-                        setBorder(BorderFactory.createCompoundBorder(
-                            new roundedBorder(16, getAccentBorderColor(), 2),
-                            new EmptyBorder(15, 10, 15, 10)
-                        ));
-                    }
-                    updateOrderSummary();
-                }
-                final Color limeHover = UIManager.getColor("Sidebar.hoverBackground") != null
-                ? UIManager.getColor("Sidebar.hoverBackground")
-                : new Color(0xDAEC73);
-                @Override
-                public void mouseEntered(java.awt.event.MouseEvent e) {
-                    if (!selected) {
-                        setBackground(limeHover);
-                    }
-                }
-                
-                @Override
-                public void mouseExited(java.awt.event.MouseEvent e) {
-                    if (!selected) {
-                        setOpaque(false);
-                        setBackground(new Color(0,0,0,0));
-                    }
-                }
-            });
-        }
-        
-        public void updateThemeColors() {
-            Color textColor = getAdaptiveForegroundColor();
-            if (textLabel != null) {
-                textLabel.setForeground(textColor);
-            }
-            if (!selected) {
-                setBorder(BorderFactory.createCompoundBorder(
-                    new roundedBorder(16, getAccentBorderColor(), 2),
-                    new EmptyBorder(15, 10, 15, 10)
-                ));
-            }
         }
     }
+    public double getUnitPrice() { return price; }
     
     @Override
     public void updateUI() {
@@ -821,3 +850,4 @@ public class PickupPanel extends JPanel {
         }
     }
 }           
+}
