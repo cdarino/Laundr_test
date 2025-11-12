@@ -225,4 +225,60 @@ public class CustomerDAO {
 
         return -1.0; // indicate failure
     }
+    public boolean deductWalletBalance(int custID, double amount) {
+    if (connection == null) {
+        System.err.println("CustomerDAO.deductWalletBalance: no connection.");
+        return false;
+    }
+    if (amount <= 0) {
+        System.err.println("CustomerDAO.deductWalletBalance: amount must be positive.");
+        return false;
+    }
+
+    String selectSql = "SELECT walletBalance FROM customer WHERE custID = " + custID + " FOR UPDATE";
+    String updateSql = "UPDATE customer SET walletBalance = ? WHERE custID = ?";
+
+    try {
+        // use transaction to avoid race conditions
+        boolean previousAutoCommit = connection.getAutoCommit();
+        try {
+            connection.setAutoCommit(false);
+
+            double currentBalance = 0.0;
+            try (Statement st = connection.createStatement();
+                 ResultSet rs = st.executeQuery("SELECT walletBalance FROM customer WHERE custID = " + custID)) {
+                if (rs.next()) currentBalance = rs.getDouble("walletBalance");
+                else {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            if (currentBalance < amount) {
+                connection.rollback();
+                return false; // insufficient funds
+            }
+
+            double newBalance = currentBalance - amount;
+            try (PreparedStatement ps = connection.prepareStatement(updateSql)) {
+                ps.setDouble(1, newBalance);
+                ps.setInt(2, custID);
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    connection.rollback();
+                    return false;
+                }
+            }
+
+            connection.commit();
+            return true;
+        } finally {
+            connection.setAutoCommit(previousAutoCommit);
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+        try { connection.rollback(); } catch (SQLException ignored) {}
+        return false;
+    }
+}
 }

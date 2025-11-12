@@ -28,6 +28,9 @@ import java.sql.SQLException;
 import org.example.database.ServiceDAO;
 import org.example.service.Service;
 import org.example.service.ServiceFactory;
+import java.util.Set;
+import java.util.LinkedHashSet;
+
 
 public class PickupPanel extends JPanel {
     private static final Color FIXED_BACKGROUND = new Color(245, 245, 245);
@@ -45,7 +48,7 @@ public class PickupPanel extends JPanel {
     
     private JLabel serviceTitleLabel;
     private List<ServiceButton> serviceButtons = new ArrayList<>();
-    private List<String> selectedServices = new ArrayList<>();
+    private Set<String> selectedServices = new LinkedHashSet<>();
     
     private JLabel detailsTitleLabel;
     private JRadioButton kiloBtn, articleBtn, yesBtn, noBtn;
@@ -57,6 +60,8 @@ public class PickupPanel extends JPanel {
     private JLabel summaryTitleLabel;
     private JLabel selectedServiceLabel, quantitySummaryLabel, separationSummaryLabel;
     private JTextArea instructionsSummaryArea;
+    private JLabel totalTitleLabel;
+    private JLabel totalAmountLabel;
     
     private buttonCreator goBackBtn, confirmBtn;
     
@@ -175,12 +180,14 @@ public class PickupPanel extends JPanel {
                     ServiceFactory.create("pressonly")
             );
         }*/
-
+        // If this method can be called more than once, clear previous buttons to avoid duplicated UI and state.
+        serviceButtons.clear();
+        servicesPanel.removeAll();
         for (Service s : services) {
-    // pass the base price to the button and keep a reference for theme updates
-    ServiceButton card = new ServiceButton(s.getName(), s.getIconPath(), s.basePrice());
-    servicesPanel.add(card);
-    serviceButtons.add(card);
+        // pass the base price to the button and keep a reference for theme updates
+            ServiceButton card = new ServiceButton(s.getName(), s.getIconPath(), s.basePrice());
+            servicesPanel.add(card);
+            serviceButtons.add(card);
 }
 
         // Scroll pane for services
@@ -404,7 +411,26 @@ public class PickupPanel extends JPanel {
         instructionsSummaryScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
         instructionsSummaryScroll.setPreferredSize(new Dimension(0, 100));
         
-        summaryPanel.add(instructionsSummaryScroll);
+                summaryPanel.add(instructionsSummaryScroll);
+
+        // --- Total display (NEW) ---
+        summaryPanel.add(Box.createVerticalStrut(12));
+
+        totalTitleLabel = new JLabel("Total:");
+        totalTitleLabel.setFont(UIManager.getFont("Label.font"));
+        totalTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        summaryPanel.add(totalTitleLabel);
+        summaryPanel.add(Box.createVerticalStrut(6));
+
+        totalAmountLabel = new JLabel("\u20B10.00"); // initial value
+        try {
+            totalAmountLabel.setFont(fontManager.h3()); // use panel font helper if present
+        } catch (Exception ignored) {
+            totalAmountLabel.setFont(UIManager.getFont("Label.font"));
+        }
+        totalAmountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        summaryPanel.add(totalAmountLabel);
+
         summaryPanel.add(Box.createVerticalGlue());
         
         JScrollPane summaryScroll = new JScrollPane(summaryPanel);
@@ -484,8 +510,12 @@ public class PickupPanel extends JPanel {
                     }
                 }
                 
-                parentPanel.add(new ConfirmPaymentPanel(services, qty, sep, instr, userAddress), "CONFIRM_PAYMENT");
-                ((CardLayout) parentPanel.getLayout()).show(parentPanel, "CONFIRM_PAYMENT");
+                // compute total from current selection and quantity (helper added below)
+double computedTotal = getCurrentTotal();
+
+// pass computedTotal into ConfirmPaymentPanel so display matches Pickup panel
+parentPanel.add(new ConfirmPaymentPanel(services, qty, sep, instr, userAddress, computedTotal), "CONFIRM_PAYMENT");
+((CardLayout) parentPanel.getLayout()).show(parentPanel, "CONFIRM_PAYMENT");
             }
         });
         styleButton(confirmBtn);
@@ -497,6 +527,20 @@ public class PickupPanel extends JPanel {
         
         return bottomPanel;
     }
+
+    // Compute current total from selected service buttons and the quantity field.
+// Keeps exactly the same logic used in updateOrderSummary().
+private double getCurrentTotal() {
+    int qty = getQuantityValue(); // existing helper you added
+    int effectiveQty = Math.max(1, qty);
+    double total = 0.0;
+    for (ServiceButton btn : serviceButtons) {
+        if (btn != null && btn.isSelected()) {
+            total += btn.getUnitPrice() * effectiveQty;
+        }
+    }
+    return total;
+}
     
     private void styleButton(buttonCreator btn) {
         Font fredokaBold = getFredokaBold(14f);
@@ -567,44 +611,58 @@ public class PickupPanel extends JPanel {
     
     private void updateOrderSummary() {
         if (!isInitialized) return;
-        
+
+        // ----- Services list -----
         if (selectedServices.isEmpty()) {
             selectedServiceLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Availed Service/s:<br>None</body></html>");
         } else {
             StringBuilder sb = new StringBuilder("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Availed Service/s:<br>");
-            selectedServices.forEach(s -> sb.append("• ").append(s).append("<br>"));
+            for (String s : selectedServices) {
+                sb.append("• ").append(s).append("<br>");
+            }
             sb.append("</body></html>");
             selectedServiceLabel.setText(sb.toString());
         }
-        
-        String quantityText = quantityField.getText().trim();
-        String serviceType = getSelectedButtonText(serviceTypeGroup);
-        if (quantityText.isEmpty() || serviceType.isEmpty()) {
-            quantitySummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Quantity:<br>0</body></html>");
-        } else {
-            String unit = serviceType.equals("Loads") ? "loads" : "pcs";
-            quantitySummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Quantity:<br>" + 
-                quantityText + " " + unit + "</body></html>");
-        }
-        
-        String sepText = getSelectedButtonText(colorSeparationGroup);
-        String sepDisplay = sepText.equals("Yes") ? "Separate" : "Do Not Separate";
-        separationSummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Separation:<br>" + 
-            sepDisplay + "</body></html>");
-        
-        String instructions = instructionsArea.getText().trim();
-        if (instructions.isEmpty()) {
-            instructionsSummaryArea.setText("None");
-        } else {
-            if (instructions.length() > 250) {
-                instructionsSummaryArea.setText(instructions.substring(0, 247) + "...");
-            } else {
-                instructionsSummaryArea.setText(instructions);
+
+        // ----- Quantity -----
+        int qty = getQuantityValue();
+        quantitySummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Quantity:<br>" + qty + "</body></html>");
+
+        // ----- Separation -----
+        String separationText = "Do Not Separate";
+        if (yesBtn != null && yesBtn.isSelected()) separationText = "Separate";
+        else if (noBtn != null && noBtn.isSelected()) separationText = "Do Not Separate";
+        separationSummaryLabel.setText("<html><body style='width: 100%; word-wrap: break-word; overflow-wrap: break-word;'>Separation:<br>" + separationText + "</body></html>");
+
+        // ----- Instructions -----
+        instructionsSummaryArea.setText(instructionsArea.getText().trim().isEmpty() ? "None" : instructionsArea.getText());
+
+        // ----- Compute total from selected service buttons -----
+        double total = 0.0;
+        int effectiveQty = Math.max(1, qty);
+        for (ServiceButton btn : serviceButtons) {
+            if (btn != null && btn.isSelected()) {
+                total += btn.getUnitPrice() * effectiveQty;
             }
         }
-        
-        summaryPanel.revalidate();
-        summaryPanel.repaint();
+
+        // Update the total label
+        if (totalAmountLabel != null) {
+            totalAmountLabel.setText(String.format("\u20B1%.2f", total));
+        }
+    }
+
+        // Read the quantity field, return integer >=1 (default 1)
+    private int getQuantityValue() {
+        if (quantityField == null) return 1;
+        String t = quantityField.getText().trim();
+        if (t.isEmpty()) return 1;
+        try {
+            int v = Integer.parseInt(t.replaceAll("[^0-9]", ""));
+            return Math.max(1, v);
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
     }
     
     private String getSelectedButtonText(ButtonGroup group) {
@@ -779,25 +837,25 @@ public class PickupPanel extends JPanel {
         addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                selected = !selected;
-                if (selected) {
-                    selectedServices.add(text);
-                    setBackground(new Color(100,150,255));
-                    setBorder(BorderFactory.createCompoundBorder(
-                        new roundedBorder(16, new Color(50, 100, 200), 2),
-                        new EmptyBorder(15, 10, 15, 10)
-                    ));
-                } else {
-                    selectedServices.remove(text);
-                    setOpaque(false);
-                    setBackground(new Color(0,0,0,0));
-                    setBorder(BorderFactory.createCompoundBorder(
-                        new roundedBorder(16, getAccentBorderColor(), 2),
-                        new EmptyBorder(15, 10, 15, 10)
-                    ));
-                }
-                updateOrderSummary();
-            }
+    selected = !selected;
+    if (selected) {
+        selectedServices.add(text); // Set prevents duplicates
+        setBackground(new Color(100,150,255));
+        setBorder(BorderFactory.createCompoundBorder(
+            new roundedBorder(16, new Color(50, 100, 200), 2),
+            new EmptyBorder(15, 10, 15, 10)
+        ));
+    } else {
+        selectedServices.remove(text);
+        setOpaque(false);
+        setBackground(new Color(0,0,0,0));
+        setBorder(BorderFactory.createCompoundBorder(
+            new roundedBorder(16, getAccentBorderColor(), 2),
+            new EmptyBorder(15, 10, 15, 10)
+        ));
+    }
+    updateOrderSummary();
+}
             final Color limeHover = UIManager.getColor("Sidebar.hoverBackground") != null
                 ? UIManager.getColor("Sidebar.hoverBackground")
                 : new Color(0xDAEC73);
@@ -816,6 +874,7 @@ public class PickupPanel extends JPanel {
                 }
             }
         });
+        
     }
         
         public void updateThemeColors() {
@@ -835,7 +894,12 @@ public class PickupPanel extends JPanel {
             ));
         }
     }
+    
     public double getUnitPrice() { return price; }
+
+    public boolean isSelected() {
+            return selected;
+        }
     
     @Override
     public void updateUI() {

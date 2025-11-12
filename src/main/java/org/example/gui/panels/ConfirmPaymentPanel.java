@@ -20,7 +20,9 @@ import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import java.util.List;
@@ -59,6 +61,8 @@ public class ConfirmPaymentPanel extends JPanel {
     private JTextArea instructionsSummaryArea;
     private JPanel summaryPanel;
     private JLabel instructionsHeaderLabel;
+    private JLabel totalTitleLabel;
+    private JLabel totalAmountLabel;
     
     // Bottom buttons
     private buttonCreator goBackBtn, confirmPaymentBtn;
@@ -72,12 +76,14 @@ public class ConfirmPaymentPanel extends JPanel {
     private String instructionsText;
     private String userAddress;
     private String loggedInUsername;
+    private double precomputedTotal = -1.0; // NEW: total passed from PickupPanel for accurate display
 
-    public ConfirmPaymentPanel(String services, String quantity, String separation, String instructions, String address) {
-        this.servicesText = services;
-        this.quantityText = quantity;
-        this.separationText = separation;
-        this.instructionsText = instructions;
+    public ConfirmPaymentPanel(String services, String quantity, String separation, String instructions, String address, double precomputedTotal) {
+    this.servicesText = services;
+    this.quantityText = quantity;
+    this.separationText = separation;
+    this.instructionsText = instructions;
+    this.precomputedTotal = precomputedTotal; // store passed-in total
         
         // Fetch address from database
         this.userAddress = fetchUserAddress();
@@ -215,15 +221,11 @@ public class ConfirmPaymentPanel extends JPanel {
         paymentPanel.add(payViaLabel);
         paymentPanel.add(Box.createVerticalStrut(8));
         
+        // Replace PaymentAppItem[] paymentApps = {...} with this in createPaymentSection()
         PaymentAppItem[] paymentApps = {
             new PaymentAppItem("Select Payment App", null),
-            new PaymentAppItem("GCash", "Icons/apps/gcash.svg"),
-            new PaymentAppItem("Maya", "Icons/apps/paymaya.svg"),
-            new PaymentAppItem("PayPal", "Icons/apps/paypal.svg"),
-            new PaymentAppItem("ShopeePay", "Icons/apps/shopeepay.svg"),
-            new PaymentAppItem("GrabPay", "Icons/apps/grabpay.svg"),
-//            new PaymentAppItem("Digital Wallet", "Icons/lightmode/wallet.svg")
-        };
+            new PaymentAppItem("Wallet", "Icons/lightmode/wallet.svg")
+};
         
         paymentAppCombo = new JComboBox<>(paymentApps);
         paymentAppCombo.setRenderer(new PaymentAppRenderer());
@@ -231,6 +233,7 @@ public class ConfirmPaymentPanel extends JPanel {
         paymentAppCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         paymentAppCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
         paymentAppCombo.setEnabled(false);
+        paymentAppCombo.addActionListener(evt -> updatePaymentUI());
         
         JPanel comboPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         comboPanel.setOpaque(false);
@@ -241,7 +244,7 @@ public class ConfirmPaymentPanel extends JPanel {
         paymentPanel.add(comboPanel);
         paymentPanel.add(Box.createVerticalStrut(12));
         
-        phoneNumberLabel = new JLabel("Phone Number");
+        phoneNumberLabel = new JLabel("Balance");
         phoneNumberLabel.setFont(UIManager.getFont("Label.font"));
         phoneNumberLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         
@@ -250,7 +253,7 @@ public class ConfirmPaymentPanel extends JPanel {
         phoneNumberPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         phoneNumberPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         
-        phonePrefix = new JLabel("+63 ");
+        phonePrefix = new JLabel(" ");
         phonePrefix.setFont(UIManager.getFont("TextField.font"));
         phonePrefix.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(1, 1, 1, 0, new Color(200, 200, 200)),
@@ -333,95 +336,178 @@ public class ConfirmPaymentPanel extends JPanel {
     }
     
     private void updatePhoneNumberVisibility() {
-        boolean showPhone = cashlessBtn.isSelected() && paymentAppCombo.getSelectedIndex() > 0;
-        phoneNumberLabel.setVisible(showPhone);
-        phoneNumberPanel.setVisible(showPhone);
-        
-        Container parent = phoneNumberPanel.getParent();
-        if (parent != null) {
-            parent.revalidate();
-            parent.repaint();
+    boolean cashless = cashlessBtn != null && cashlessBtn.isSelected();
+    boolean walletSelected = false;
+
+    if (paymentAppCombo != null && paymentAppCombo.getSelectedIndex() > 0) {
+        PaymentAppItem item = (PaymentAppItem) paymentAppCombo.getSelectedItem();
+        if (item != null && "Wallet".equalsIgnoreCase(item.getName())) {
+            walletSelected = true;
         }
     }
+
+    boolean showBalanceBox = cashless && walletSelected;
+
+    phoneNumberLabel.setVisible(showBalanceBox);
+    phoneNumberPanel.setVisible(showBalanceBox);
+
+    if (showBalanceBox) {
+        try {
+            Window w = SwingUtilities.getWindowAncestor(this);
+            String currentUser = null;
+            if (w instanceof org.example.gui.Mainframe) {
+                currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
+            }
+
+            if (currentUser != null && !currentUser.isBlank()) {
+                Connection conn = DBConnect.getConnection();
+                if (conn != null && !conn.isClosed()) {
+                    CustomerDAO cdao = new CustomerDAO(conn);
+                    int custID = cdao.getCustomerId(currentUser);
+                    if (custID > 0) {
+                        double balance = cdao.getWalletBalance(custID);
+                        phoneNumberField.setEditable(false);
+                        phoneNumberField.setText(String.format("Balance: \u20B1%.2f", balance));
+                    } else {
+                        phoneNumberField.setEditable(false);
+                        phoneNumberField.setText("Balance: N/A");
+                    }
+                } else {
+                    phoneNumberField.setEditable(false);
+                    phoneNumberField.setText("Balance: N/A");
+                }
+            } else {
+                phoneNumberField.setEditable(false);
+                phoneNumberField.setText("Balance: N/A");
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            phoneNumberField.setEditable(false);
+            phoneNumberField.setText("Balance: ERR");
+        }
+    } else {
+        phoneNumberField.setEditable(true);
+        phoneNumberField.setText("");
+    }
+
+    Container parent = phoneNumberPanel.getParent();
+    if (parent != null) {
+        parent.revalidate();
+        parent.repaint();
+    }
+}
     
     private roundedPanel createSummarySection() {
-        JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
-        outerContainer.setOpaque(true);
-        
-        summaryTitleLabel = new JLabel("Order Summary");
-        summaryTitleLabel.setFont(fontManager.h2());
-        summaryTitleLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
-        outerContainer.add(summaryTitleLabel, BorderLayout.NORTH);
-        
-        roundedPanel section = new roundedPanel(18);
-        section.setLayout(new BorderLayout(10, 10));
-        section.setBorder(BorderFactory.createCompoundBorder(
-            new roundedBorder(18, getAccentBorderColor(), 2),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
-        
-        summaryPanel = new JPanel();
-        summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
-        summaryPanel.setOpaque(true);
-        summaryPanel.setBorder(new EmptyBorder(5, 0, 5, 0));
-        
-        selectedServiceLabel = createSummaryLabel(servicesText);
-        quantitySummaryLabel = createSummaryLabel(quantityText);
-        separationSummaryLabel = createSummaryLabel(separationText);
-        
-        summaryPanel.add(selectedServiceLabel);
-        summaryPanel.add(Box.createVerticalStrut(15));
-        summaryPanel.add(quantitySummaryLabel);
-        summaryPanel.add(Box.createVerticalStrut(15));
-        summaryPanel.add(separationSummaryLabel);
-        summaryPanel.add(Box.createVerticalStrut(15));
-        
-        instructionsHeaderLabel = new JLabel("Instructions:");
-        instructionsHeaderLabel.setFont(UIManager.getFont("Label.font"));
-        instructionsHeaderLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        summaryPanel.add(instructionsHeaderLabel);
-        summaryPanel.add(Box.createVerticalStrut(5));
-        
-        instructionsSummaryArea = new JTextArea();
-        instructionsSummaryArea.setText(extractTextFromHTML(instructionsText));
-        instructionsSummaryArea.setLineWrap(true);
-        instructionsSummaryArea.setWrapStyleWord(true);
-        instructionsSummaryArea.setEditable(false);
-        instructionsSummaryArea.setFont(UIManager.getFont("TextArea.font"));
-        instructionsSummaryArea.setBorder(BorderFactory.createCompoundBorder(
-            new roundedBorder(10, new Color(200, 200, 200), 1),
-            new EmptyBorder(8, 8, 8, 8)
-        ));
-        instructionsSummaryArea.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        JScrollPane instructionsSummaryScroll = new JScrollPane(instructionsSummaryArea);
-        instructionsSummaryScroll.setBorder(null);
-        instructionsSummaryScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        instructionsSummaryScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        instructionsSummaryScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
-        instructionsSummaryScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-        instructionsSummaryScroll.setPreferredSize(new Dimension(0, 100));
-        
-        summaryPanel.add(instructionsSummaryScroll);
-        summaryPanel.add(Box.createVerticalGlue());
-        
-        JScrollPane summaryScroll = new JScrollPane(summaryPanel);
-        summaryScroll.setOpaque(true);
-        summaryScroll.getViewport().setOpaque(true);
-        summaryScroll.setBorder(null);
-        summaryScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        summaryScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        section.add(summaryScroll, BorderLayout.CENTER);
-        
-        outerContainer.add(section, BorderLayout.CENTER);
-        
-        roundedPanel wrapper = new roundedPanel(0);
-        wrapper.setLayout(new BorderLayout());
-        wrapper.setOpaque(true);
-        wrapper.add(outerContainer, BorderLayout.CENTER);
-        
-        return wrapper;
+    JPanel outerContainer = new JPanel(new BorderLayout(0, 6));
+    outerContainer.setOpaque(true);
+
+    summaryTitleLabel = new JLabel("Order Summary");
+    summaryTitleLabel.setFont(fontManager.h2());
+    summaryTitleLabel.setBorder(new EmptyBorder(0, 4, 0, 0));
+    outerContainer.add(summaryTitleLabel, BorderLayout.NORTH);
+
+    roundedPanel section = new roundedPanel(18);
+    section.setLayout(new BorderLayout(10, 10));
+    section.setBorder(BorderFactory.createCompoundBorder(
+        new roundedBorder(18, getAccentBorderColor(), 2),
+        new EmptyBorder(15, 15, 15, 15)
+    ));
+
+    summaryPanel = new JPanel();
+    summaryPanel.setLayout(new BoxLayout(summaryPanel, BoxLayout.Y_AXIS));
+    summaryPanel.setOpaque(true);
+    summaryPanel.setBorder(new EmptyBorder(5, 0, 5, 0));
+
+    // Preserve incoming HTML/text for labels
+    selectedServiceLabel = createSummaryLabel(servicesText);
+    quantitySummaryLabel = createSummaryLabel(quantityText);
+    separationSummaryLabel = createSummaryLabel(separationText);
+
+    summaryPanel.add(selectedServiceLabel);
+    summaryPanel.add(Box.createVerticalStrut(15));
+    summaryPanel.add(quantitySummaryLabel);
+    summaryPanel.add(Box.createVerticalStrut(15));
+    summaryPanel.add(separationSummaryLabel);
+    summaryPanel.add(Box.createVerticalStrut(15));
+
+    instructionsHeaderLabel = new JLabel("Instructions:");
+    instructionsHeaderLabel.setFont(UIManager.getFont("Label.font"));
+    instructionsHeaderLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    summaryPanel.add(instructionsHeaderLabel);
+    summaryPanel.add(Box.createVerticalStrut(5));
+
+    instructionsSummaryArea = new JTextArea();
+    instructionsSummaryArea.setText(extractTextFromHTML(instructionsText));
+    instructionsSummaryArea.setLineWrap(true);
+    instructionsSummaryArea.setWrapStyleWord(true);
+    instructionsSummaryArea.setEditable(false);
+    instructionsSummaryArea.setFont(UIManager.getFont("TextArea.font"));
+    instructionsSummaryArea.setBorder(BorderFactory.createCompoundBorder(
+        new roundedBorder(10, new Color(200, 200, 200), 1),
+        new EmptyBorder(8, 8, 8, 8)
+    ));
+    instructionsSummaryArea.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    JScrollPane instructionsSummaryScroll = new JScrollPane(instructionsSummaryArea);
+    instructionsSummaryScroll.setBorder(null);
+    instructionsSummaryScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+    instructionsSummaryScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+    instructionsSummaryScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+    instructionsSummaryScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+    instructionsSummaryScroll.setPreferredSize(new Dimension(0, 100));
+
+    summaryPanel.add(instructionsSummaryScroll);
+
+    // --- Total display (single label, set exactly once) ---
+    summaryPanel.add(Box.createVerticalStrut(12));
+
+    totalTitleLabel = new JLabel("Total:");
+    totalTitleLabel.setFont(UIManager.getFont("Label.font"));
+    totalTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    summaryPanel.add(totalTitleLabel);
+    summaryPanel.add(Box.createVerticalStrut(6));
+
+    totalAmountLabel = new JLabel("\u20B10.00"); // placeholder
+    try {
+        totalAmountLabel.setFont(fontManager.h3());
+    } catch (Exception ignored) {
+        totalAmountLabel.setFont(UIManager.getFont("Label.font"));
     }
+    totalAmountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    summaryPanel.add(totalAmountLabel);
+
+    // Set the total exactly once here. Prefer the precomputed total from PickupPanel;
+    // only compute from service names/quantity as a fallback.
+    if (precomputedTotal >= 0.0) {
+        totalAmountLabel.setText(String.format("\u20B1%.2f", precomputedTotal));
+    } else {
+        try {
+            double computed = computeOrderTotal();
+            totalAmountLabel.setText(String.format("\u20B1%.2f", computed));
+        } catch (Exception ex) {
+            totalAmountLabel.setText("\u20B1 0.00");
+        }
+    }
+
+    summaryPanel.add(Box.createVerticalGlue());
+
+    JScrollPane summaryScroll = new JScrollPane(summaryPanel);
+    summaryScroll.setOpaque(true);
+    summaryScroll.getViewport().setOpaque(true);
+    summaryScroll.setBorder(null);
+    summaryScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+    summaryScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+    section.add(summaryScroll, BorderLayout.CENTER);
+
+    outerContainer.add(section, BorderLayout.CENTER);
+
+    roundedPanel wrapper = new roundedPanel(0);
+    wrapper.setLayout(new BorderLayout());
+    wrapper.setOpaque(true);
+    wrapper.add(outerContainer, BorderLayout.CENTER);
+
+    return wrapper;
+}
     
     private JLabel createSummaryLabel(String text) {
         JLabel label = new JLabel(text);
@@ -480,7 +566,8 @@ public class ConfirmPaymentPanel extends JPanel {
     }
 
     // NEW: persist order using same customer resolution as Orders panel
-    private boolean createAndPersistOrder() {
+    // Replace the existing createAndPersistOrder() method with this transactional implementation
+private boolean createAndPersistOrder() {
     try {
         // Resolve current username from the top-level window (Mainframe)
         Window w = SwingUtilities.getWindowAncestor(this);
@@ -516,7 +603,7 @@ public class ConfirmPaymentPanel extends JPanel {
             return false;
         }
 
-        // Determine laundromat: prefer AppState.selectedLaundromatID
+        // Determine laundromat: prefer AppState.selectedLaundromatID (fallback to first)
         int laundromatID = AppState.selectedLaundromatID;
         if (laundromatID <= 0) {
             try (Statement st = conn.createStatement();
@@ -533,88 +620,151 @@ public class ConfirmPaymentPanel extends JPanel {
         }
 
         // --- Compute total from selected services (unit prices) and quantity ---
-    int qty = parseQuantityFromLabel(quantityText);
-    List<String> services = parseServiceNames(servicesText);
+        int qty = parseQuantityFromLabel(quantityText);
+        java.util.List<String> services = parseServiceNames(servicesText);
 
-    // Resolve service IDs and unit prices for the selected laundromat
-    ServiceDAO sdao = new ServiceDAO(conn);
-    Map<Integer, Integer> serviceQtyMap = new LinkedHashMap<>(); // serviceID -> qty
-    double sumUnitPrices = 0.0;
+        // Resolve service IDs and unit prices for the selected laundromat
+        ServiceDAO sdao = new ServiceDAO(conn);
+        java.util.Map<Integer, Integer> serviceQtyMap = new java.util.LinkedHashMap<>(); // serviceID -> qty
+        double sumUnitPrices = 0.0;
 
-    for (String sname : services) {
-        String normalized = sname.trim();
-        if (normalized.isEmpty()) continue;
+        for (String sname : services) {
+            String normalized = sname.trim();
+            if (normalized.isEmpty()) continue;
 
-        // Prefer resolving service in the selected laundromat
-        int sid = sdao.getServiceIdForName(laundromatID, normalized);
+            // Prefer resolving service in the selected laundromat
+            int sid = sdao.getServiceIdForName(laundromatID, normalized);
 
-        if (sid <= 0) {
-            // fallback: try name-only lookup (ServiceDAO.getServiceIdForName already tries that if laundromatId <= 0)
-            sid = sdao.getServiceIdForName(-1, normalized);
-        }
-
-        if (sid <= 0) {
-            // couldn't map this service name -> id in DB; skip it (log for debugging)
-            System.err.println("ConfirmPaymentPanel: Could not find service in DB: " + normalized);
-            continue;
-        }
-
-        double unitPrice = sdao.getPriceForServiceId(sid);
-        if (unitPrice < 0.0) {
-            System.err.println("ConfirmPaymentPanel: Could not get price for serviceID " + sid + " (" + normalized + ")");
-            continue;
-        }
-
-        // accumulate unit prices (will be multiplied by qty later)
-        sumUnitPrices += unitPrice;
-
-        // store quantity for insertion into orderDetails (shared qty applies to all selected services)
-        serviceQtyMap.put(sid, Math.max(1, qty));
-    }
-
-    if (serviceQtyMap.isEmpty()) {
-        JOptionPane.showMessageDialog(this,
-                "No valid services were found to create an order. Please re-check your selection.",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        return false;
-    }
-
-    double total = sumUnitPrices * Math.max(1, qty);
-
-    String instructionsPlain = extractTextFromHTML(instructionsText);
-    String paymentMethod = buildPaymentMethodString();
-
-    OrderDAO odao = new OrderDAO(conn);
-    int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
-    if (newId <= 0) {
-        JOptionPane.showMessageDialog(this,
-                "Failed to create order.",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        return false;
-    }
-
-        // persist per-service orderDetails (OrderDAO.createOrderDetails computes subtotal = basePrice * qty)
-    if (!serviceQtyMap.isEmpty()) {
-        boolean ok = odao.createOrderDetails(newId, serviceQtyMap);
-        if (!ok) {
-            System.err.println("ConfirmPaymentPanel: createOrderDetails failed for order " + newId);
-            // Not fatal here — we've created the order. You may want to rollback in a transaction in future.
-        }
-    }
-
-        if (!serviceQtyMap.isEmpty()) {
-            boolean ok = odao.createOrderDetails(newId, serviceQtyMap);
-            if (!ok) {
-                System.err.println("createOrderDetails reported failure for order " + newId);
+            if (sid <= 0) {
+                // fallback: try name-only lookup
+                sid = sdao.getServiceIdForName(-1, normalized);
             }
-        } else {
-            System.out.println("No service IDs resolved to persist orderDetails for order " + newId);
+
+            if (sid <= 0) {
+                // couldn't map this service name -> id in DB; log and skip
+                System.err.println("ConfirmPaymentPanel: Could not find service in DB: " + normalized);
+                continue;
+            }
+
+            double unitPrice = sdao.getPriceForServiceId(sid);
+            if (unitPrice < 0.0) {
+                System.err.println("ConfirmPaymentPanel: Could not get price for serviceID " + sid + " (" + normalized + ")");
+                continue;
+            }
+
+            // accumulate unit prices (will be multiplied by qty later)
+            sumUnitPrices += unitPrice;
+
+            // store quantity for insertion into orderDetails (shared qty applies to all selected services)
+            serviceQtyMap.put(sid, Math.max(1, qty));
         }
 
-        firePropertyChange("orderCreated", -1, newId);
-        return true;
+        if (serviceQtyMap.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No valid services were found to create an order. Please re-check your selection.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        double total = sumUnitPrices * Math.max(1, qty);
+        String instructionsPlain = extractTextFromHTML(instructionsText);
+        String paymentMethod = buildPaymentMethodString();
+
+        // --- Transactional section: create order, insert details, deduct wallet (if chosen) ---
+        boolean previousAutoCommit = conn.getAutoCommit();
+        try {
+            conn.setAutoCommit(false);
+
+            // If wallet selected, check and lock wallet balance now (SELECT ... FOR UPDATE)
+            if ("wallet".equalsIgnoreCase(paymentMethod)) {
+                double currentBalance = 0.0;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT walletBalance FROM customer WHERE custID = ? FOR UPDATE")) {
+                    ps.setInt(1, custID);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            currentBalance = rs.getDouble(1);
+                        } else {
+                            conn.rollback();
+                            JOptionPane.showMessageDialog(this,
+                                    "Could not read wallet balance.",
+                                    "Wallet Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                            return false;
+                        }
+                    }
+                }
+
+                if (currentBalance < total) {
+                    conn.rollback();
+                    JOptionPane.showMessageDialog(this,
+                            "Not enough funds in wallet. Current balance: \u20B1" + String.format("%.2f", currentBalance) +
+                                    "\nOrder total: \u20B1" + String.format("%.2f", total),
+                            "Insufficient Funds",
+                            JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
+            }
+
+            // Create order
+            OrderDAO odao = new OrderDAO(conn);
+            int newId = odao.createOrder(custID, laundromatID, total, instructionsPlain, paymentMethod);
+            if (newId <= 0) {
+                conn.rollback();
+                JOptionPane.showMessageDialog(this,
+                        "Failed to create order.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // persist per-service orderDetails
+            boolean detailsOk = odao.createOrderDetails(newId, serviceQtyMap);
+            if (!detailsOk) {
+                conn.rollback();
+                JOptionPane.showMessageDialog(this,
+                        "Failed to add order details.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+
+            // Deduct wallet if needed (done within same transaction)
+            if ("wallet".equalsIgnoreCase(paymentMethod)) {
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "UPDATE customer SET walletBalance = walletBalance - ? WHERE custID = ?")) {
+                    ps.setDouble(1, total);
+                    ps.setInt(2, custID);
+                    int rows = ps.executeUpdate();
+                    if (rows == 0) {
+                        conn.rollback();
+                        JOptionPane.showMessageDialog(this,
+                                "Failed to deduct wallet balance.",
+                                "Payment Error",
+                                JOptionPane.ERROR_MESSAGE);
+                        return false;
+                    }
+                }
+            }
+
+            // commit once everything succeeded
+            conn.commit();
+
+            // Let containers listening for "orderCreated" update if they want
+            firePropertyChange("orderCreated", -1, newId);
+            return true;
+
+        } catch (Exception txEx) {
+            try { conn.rollback(); } catch (Exception ignore) {}
+            txEx.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Unexpected error while creating order: " + txEx.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return false;
+        } finally {
+            try { conn.setAutoCommit(previousAutoCommit); } catch (Exception ignore) {}
+        }
 
     } catch (Exception ex) {
         ex.printStackTrace();
@@ -626,16 +776,20 @@ public class ConfirmPaymentPanel extends JPanel {
     }
 }
 
-    private String buildPaymentMethodString() {
-        if (cashOnPickupBtn.isSelected()) return "cash_on_pickup";
-        if (cashlessBtn.isSelected()) {
-            if (paymentAppCombo.getSelectedIndex() <= 0) return "cashless_unselected";
-            PaymentAppItem item = (PaymentAppItem) paymentAppCombo.getSelectedItem();
-            String phone = phoneNumberField.getText().trim();
-            return item.getName() + (phone.isEmpty() ? "" : " (" + phone + ")");
+    // Replace the existing buildPaymentMethodString() method with this
+private String buildPaymentMethodString() {
+    if (cashOnPickupBtn.isSelected()) return "cash_on_pickup";
+    if (cashlessBtn.isSelected()) {
+        if (paymentAppCombo.getSelectedIndex() <= 0) return "cashless_unselected";
+        PaymentAppItem item = (PaymentAppItem) paymentAppCombo.getSelectedItem();
+        String appName = item != null ? item.getName() : "wallet";
+        if ("Wallet".equalsIgnoreCase(appName)) {
+            return "wallet";
         }
-        return "none_selected";
+        return appName;
     }
+    return "none_selected";
+}
     
     private void styleButton(buttonCreator btn) {
         Font fredokaBold = getFredokaBold(14f);
@@ -679,45 +833,141 @@ public class ConfirmPaymentPanel extends JPanel {
         }
         return new Font("Dialog", Font.BOLD, Math.round(size));
     }
-    
-    private boolean validatePayment() {
-        if (!cashlessBtn.isSelected() && !cashOnPickupBtn.isSelected()) {
-            JOptionPane.showMessageDialog(this,
+
+    private void updatePaymentUI() {
+    boolean cashless = cashlessBtn != null && cashlessBtn.isSelected();
+    paymentAppCombo.setEnabled(cashless);
+
+    if (!cashless) {
+        // cash on pickup: keep phoneNumberField as previously used (editable but not required)
+        if (phoneNumberField != null) {
+            phoneNumberField.setEditable(true);
+            phoneNumberField.setText("");
+        }
+        return;
+    }
+
+    // cashless chosen: if payment app is Wallet, display the user's wallet balance in the same text box
+    PaymentAppItem sel = (PaymentAppItem) paymentAppCombo.getSelectedItem();
+    String appName = (sel != null && sel.getName() != null) ? sel.getName() : "";
+    if ("Wallet".equalsIgnoreCase(appName)) {
+        // show balance in the phoneNumberField (keeps layout; field is read-only)
+        try {
+            Connection conn = DBConnect.getConnection();
+            if (conn != null && !conn.isClosed()) {
+                CustomerDAO cdao = new CustomerDAO(conn);
+                Window w = SwingUtilities.getWindowAncestor(this);
+                String currentUser = null;
+                if (w instanceof org.example.gui.Mainframe) {
+                    currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
+                }
+                if (currentUser != null && !currentUser.isBlank()) {
+                    int custID = cdao.getCustomerId(currentUser);
+                    if (custID > 0) {
+                        double balance = cdao.getWalletBalance(custID);
+                        if (phoneNumberField != null) {
+                            phoneNumberField.setEditable(false);
+                            phoneNumberField.setText(String.format("\u20B1%.2f", balance));
+                        }
+                    } else {
+                        if (phoneNumberField != null) {
+                            phoneNumberField.setEditable(false);
+                            phoneNumberField.setText("N/A");
+                        }
+                    }
+                } else {
+                    if (phoneNumberField != null) {
+                        phoneNumberField.setEditable(false);
+                        phoneNumberField.setText("N/A");
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            if (phoneNumberField != null) {
+                phoneNumberField.setEditable(false);
+                phoneNumberField.setText("ERR");
+            }
+        }
+    } else {
+        // another cashless option (shouldn't happen because we only have Wallet) — keep read-only but blank
+        if (phoneNumberField != null) {
+            phoneNumberField.setEditable(false);
+            phoneNumberField.setText("");
+        }
+    }
+}
+
+private boolean validatePayment() {
+    if (!cashlessBtn.isSelected() && !cashOnPickupBtn.isSelected()) {
+        JOptionPane.showMessageDialog(this,
                 "Please select a payment method.",
                 "Validation Error",
                 JOptionPane.WARNING_MESSAGE);
+        return false;
+    }
+
+    if (cashlessBtn.isSelected()) {
+        if (paymentAppCombo.getSelectedIndex() == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a payment app (Wallet).",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
             return false;
         }
-        
-        if (cashlessBtn.isSelected()) {
-            if (paymentAppCombo.getSelectedIndex() == 0) {
-                JOptionPane.showMessageDialog(this,
-                    "Please select a payment app for cashless payment.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-            
-            String phoneNumber = phoneNumberField.getText().trim();
-            if (phoneNumber.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                    "Please enter your phone number for cashless payment.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-            
-            if (!phoneNumber.matches("\\d{10}")) {
-                JOptionPane.showMessageDialog(this,
-                    "Please enter a valid 10-digit phone number.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
-                return false;
-            }
-        }
-        
-        return true;
+
+        // Phone number is no longer required; wallet balance will be validated separately
     }
+
+    return true;
+}
+
+// Add to ConfirmPaymentPanel class
+/**
+ * Compute the pending order total from the preserved servicesText and quantityText
+ * Uses ServiceDAO to resolve service base prices.
+ */
+private double computeOrderTotal() throws Exception {
+    int qty = 1;
+    // extract integer quantity from quantityText, fallback to 1
+    if (quantityText != null) {
+        String digits = quantityText.replaceAll("[^0-9]", "");
+        if (!digits.isEmpty()) {
+            try { qty = Math.max(1, Integer.parseInt(digits)); } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    java.util.List<String> services = parseServiceNames(servicesText);
+    if (services == null || services.isEmpty()) return 0.0;
+
+    Connection conn = DBConnect.getConnection();
+    if (conn == null || conn.isClosed()) throw new Exception("No DB connection");
+
+    org.example.database.ServiceDAO sdao = new org.example.database.ServiceDAO(conn);
+    double sumUnitPrices = 0.0;
+    // Try to prefer selected laundromat if AppState.selectedLaundromatID is set
+    int laundromatID = -1;
+    try {
+        laundromatID = AppState.selectedLaundromatID;
+    } catch (Exception ignored) { laundromatID = -1; }
+
+    for (String name : services) {
+        String normalized = name.trim();
+        if (normalized.isEmpty()) continue;
+
+        int sid = sdao.getServiceIdForName(laundromatID > 0 ? laundromatID : -1, normalized);
+        if (sid <= 0) {
+            // fallback: name-only
+            sid = sdao.getServiceIdForName(-1, normalized);
+        }
+        if (sid <= 0) continue;
+
+        double unitPrice = sdao.getPriceForServiceId(sid);
+        if (unitPrice >= 0.0) sumUnitPrices += unitPrice;
+    }
+
+    return sumUnitPrices * Math.max(1, qty);
+}
 
     /** Parse the servicesText (HTML/label) into a list of service names (best-effort). */
 private List<String> parseServiceNames(String servicesHtml) {
