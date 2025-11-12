@@ -496,32 +496,7 @@ public class PickupPanel extends JPanel {
             String instr = instructionsSummaryArea.getText();
             
             // Fetch address dynamically from database
-            // Resolve logged-in username from the top-level window (Mainframe)
-String userAddress = "No address on file";
-Window w = SwingUtilities.getWindowAncestor(this);
-String currentUser = null;
-if (w instanceof org.example.gui.Mainframe) {
-    currentUser = ((org.example.gui.Mainframe) w).getCurrentUser();
-}
-
-if (currentUser != null && !currentUser.isBlank()) {
-    try {
-        Connection conn = DBConnect.getConnection();
-        if (conn != null && !conn.isClosed()) {
-            org.example.database.CustomerDAO cdao = new org.example.database.CustomerDAO(conn);
-            org.example.models.Customer customer = cdao.getCustomerByUsername(currentUser);
-            if (customer != null) {
-                String addr = customer.getAddress();
-                if (addr != null && !addr.trim().isEmpty()) {
-                    userAddress = addr;
-                }
-            }
-        }
-    } catch (Exception e) {
-        e.printStackTrace();
-        // keep fallback "No address on file"
-    }
-}
+            String userAddress = "Real Address in Davao City, Davao del Sur, Philippines";
             
             Container parent = getParent();
             if (parent instanceof JPanel) {
